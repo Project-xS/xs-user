@@ -1,4 +1,4 @@
-package com.example.xs_user
+package com.nammacanteen.user
 
 import io.flutter.embedding.android.FlutterActivity
 

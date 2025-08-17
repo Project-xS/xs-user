@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/home_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math' as math;
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? snackbarMessage;
+  const LoginScreen({super.key, this.snackbarMessage});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   bool _isLoading = false;
   late AnimationController _controller;
+  final supabase = Supabase.instance.client;
 
   @override
   void initState() {
@@ -25,56 +27,69 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(seconds: 20),
     )..repeat();
+
+    if (widget.snackbarMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.snackbarMessage!)),
+        );
+      });
+    }
+    
+    _setupAuthListener();
+  }
+
+  void _setupAuthListener() {
+    supabase.auth.onAuthStateChange.listen((data) async {
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn) {
+        final user = supabase.auth.currentUser;
+        if (user != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('hasSeenOnboarding', true);
+          await prefs.setString('userEmail', user.email ?? '');
+          await prefs.setString('userId', user.id);
+
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            });
+          }
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
-    if (_emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
     try {
-      final response = await ApiService().loginUser(_emailController.text);
-      if (!mounted) return;
-      if (response.status == 'valid') {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setInt('userId', 1);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      } else {
-        if (!mounted) return;
+      await supabase.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'com.nammacanteen.user://login-callback',
+        queryParams: {
+          'hd': 'citchennai.net',
+          'scope': 'email profile',
+        },
+      );
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.error ?? 'Login failed')),
+          SnackBar(content: Text('Login failed: $e')),
         );
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred: $e')),
-      );
+      debugPrint('Google sign-in error: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -103,74 +118,38 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   Text(
                     'Sign in to continue',
                     style: GoogleFonts.montserrat(
-                      color: Colors.white.withAlpha((255 * 0.8).round()),
+                      color: Colors.white.withOpacity(0.8),
                       fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 48),
-                  _buildTextField(
-                    controller: _emailController,
-                    hintText: 'Email',
-                    icon: Icons.email_outlined,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _passwordController,
-                    hintText: 'Password',
-                    icon: Icons.lock_outline,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 32),
                   _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : ElevatedButton(
-                          onPressed: _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF7A3A),
-                            padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: Text(
-                            'Login',
+                      : ElevatedButton.icon(
+                          icon: const Icon(Icons.login, color: Colors.white),
+                          label: Text(
+                            'Sign in with Google',
                             style: GoogleFonts.montserrat(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF7A3A),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 40, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          onPressed: _signInWithGoogle,
                         ),
                 ],
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    bool obscureText = false,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha((255 * 0.1).round()),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        style: GoogleFonts.montserrat(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: GoogleFonts.montserrat(color: Colors.white.withAlpha((255 * 0.5).round())),
-          border: InputBorder.none,
-          prefixIcon: Icon(icon, color: Colors.white.withAlpha((255 * 0.8).round())),
-        ),
       ),
     );
   }

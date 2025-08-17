@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:xs_user/api_service.dart';
+import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/cart_provider.dart';
+import 'package:xs_user/login_screen.dart';
 import 'package:xs_user/orders_list_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:ui';
 import 'dart:async';
 
@@ -41,13 +45,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _placeOrder() async {
-    final cart = Provider.of<CartProvider>(context, listen: false);
-    if (cart.items.isEmpty) return;
-
     setState(() {
       _isPlacingOrder = true;
       _orderError = null;
     });
+    final bool isSessionValid = await AuthService.isGoogleSessionValid();
+    if (!isSessionValid) {
+      setState(() {
+        _orderError = 'Your Google session has expired. Please login again.';
+        _isPlacingOrder = false;
+      });
+      return;
+    }
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    if (cart.items.isEmpty) {
+       setState(() {
+        _isPlacingOrder = false;
+      });
+      return;
+    }
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      setState(() {
+        _orderError = 'You are not signed in. Please sign in to place an order.';
+        _isPlacingOrder = false;
+      });
+      return;
+    }
 
     final itemIds = cart.items.values.expand((item) {
       return List.generate(item.quantity, (_) => int.parse(item.id));

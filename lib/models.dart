@@ -198,12 +198,14 @@ class User {
   final String rfid;
   final String name;
   final String email;
+  final String? profilePictureUrl;
 
   User({
     required this.id,
     required this.rfid,
     required this.name,
     required this.email,
+    this.profilePictureUrl,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -212,6 +214,7 @@ class User {
       rfid: json['rfid'],
       name: json['name'],
       email: json['email'],
+      profilePictureUrl: json['profile_picture_url'],
     );
   }
 }

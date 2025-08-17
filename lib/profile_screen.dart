@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:xs_user/login_screen.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/theme_provider.dart';
-
 import 'package:xs_user/help_and_support_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,25 +28,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<User> _loadUser() async {
-    // final prefs = await SharedPreferences.getInstance();
-    // final userId = prefs.getInt('userId');
-    // int userId = 1;
-    // if (userId != null) {
-    //   return ApiService().getUser(userId);
-    // } else {
-      return Future.value(User(
-        id: 1,
-        rfid: '1234567890',
-        name: 'John Durairaj',
-        email: 'JD@citchennai.net',
-      ));
-    // }
+    final currentUser = Supabase.instance.client.auth.currentUser;
+
+    if (currentUser != null) {
+      final userMetadata = currentUser.userMetadata;
+      final name = userMetadata?['full_name'] as String? ?? 'User Name';
+      final email = currentUser.email ?? 'user@example.com';
+      final profilePictureUrl = userMetadata?['avatar_url'] as String?;
+      // debugPrint('Profile Picture URL: $profilePictureUrl');
+      return User(
+        id: 0,
+        rfid: 'N/A',
+        name: name,
+        email: email,
+        profilePictureUrl: profilePictureUrl,
+      );
+    } else {
+      return User(
+        id: 0,
+        rfid: 'N/A',
+        name: 'Guest User',
+        email: 'guest@example.com',
+        profilePictureUrl: null,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -71,10 +83,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return Column(
               children: [
                 const SizedBox(height: 24),
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 48,
-                  backgroundImage: NetworkImage(
-                      'https://w0.peakpx.com/wallpaper/725/191/HD-wallpaper-master-vijay-jd-thalapathy.jpg'),
+                  backgroundImage:CachedNetworkImageProvider(user.profilePictureUrl!),
+                  child: user.profilePictureUrl == null
+                      ? Icon(Icons.person, size: 48, color: Theme.of(context).iconTheme.color)
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -145,16 +159,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.logout,
                   text: 'Logout',
                   onTap: () async {
+                    await GoogleSignIn.instance.signOut();
+                    await Supabase.instance.client.auth.signOut();
                     final prefs = await SharedPreferences.getInstance();
-                    await prefs.setBool('isLoggedIn', false);
-                    if (context.mounted){
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                      (Route<dynamic> route) => false,
-                    );}
+                    await prefs.remove('userEmail');
+                    await prefs.remove('userId');
+                    await prefs.setBool('hasSeenOnboarding', true);
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                        (Route<dynamic> route) => false,
+                      );
+                    }
                   },
                   isLogout: true,
                 ),
