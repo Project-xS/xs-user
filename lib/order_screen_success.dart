@@ -11,7 +11,21 @@ class OrderSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (didPop) {
+          return;
+        }
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
+          ),
+          (Route<dynamic> route) => false,
+        );
+      },
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: Column(
@@ -86,6 +100,7 @@ class OrderSuccessScreen extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

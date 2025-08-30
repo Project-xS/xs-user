@@ -1,8 +1,8 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:xs_user/api_service.dart';
 import 'package:xs_user/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math' as math;
@@ -74,7 +74,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     try {
       await supabase.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'com.nammacanteen.user://login-callback',
+        redirectTo: Platform.isWindows
+            ? 'http://localhost:49152'
+            : 'com.nammacanteen.user://login-callback',
         queryParams: {
           'hd': 'citchennai.net',
           'scope': 'email profile',
@@ -118,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   Text(
                     'Sign in to continue',
                     style: GoogleFonts.montserrat(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withAlpha((255 * 0.8).round()),
                       fontSize: 16,
                     ),
                   ),

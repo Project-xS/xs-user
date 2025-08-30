@@ -1,19 +1,23 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class CartItem {
   final String id;
   final String name;
   final double price;
-  final bool hasImage;
+  final String? pic;
+  final String? etag;
   final bool isVeg;
+  final int stock;
   int quantity;
 
   CartItem({
     required this.id,
     required this.name,
     required this.price,
-    required this.hasImage,
+    required this.pic,
+    required this.etag,
     required this.isVeg,
+    required this.stock,
     this.quantity = 1,
   });
 }
@@ -40,21 +44,31 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  void addItem(String productId, String name, double price, int canteenId, bool hasImage, bool isVeg) {
+  void addItem(String productId, String name, double price, int canteenId, String? pic, String? etag, bool isVeg, int stock) {
     if (_canteenId != null && _canteenId != canteenId) {
       clear();
     }
     _canteenId = canteenId;
 
     if (_items.containsKey(productId)) {
+      if (_items[productId]!.quantity >= 20) {
+        SnackBar(content: Text('You can only add up to 20 of each item.'));
+        return;
+      }
+      if(stock != -1 && _items[productId]!.quantity >= stock){
+        SnackBar(content: Text('Can\'t add more items, stock limit reached.'));
+        return;
+      }
       _items.update(
         productId,
         (existingCartItem) => CartItem(
           id: existingCartItem.id,
           name: existingCartItem.name,
           price: existingCartItem.price,
-          hasImage: existingCartItem.hasImage,
+          pic: existingCartItem.pic,
+          etag: existingCartItem.etag,
           isVeg: existingCartItem.isVeg,
+          stock: existingCartItem.stock,
           quantity: existingCartItem.quantity + 1,
         ),
       );
@@ -65,7 +79,10 @@ class CartProvider with ChangeNotifier {
           id: productId,
           name: name,
           price: price,
-          hasImage: hasImage,
+          pic: pic,
+          etag: etag,
+          stock: stock,
+          quantity: 1,
           isVeg: isVeg,
         ),
       );
@@ -83,7 +100,9 @@ class CartProvider with ChangeNotifier {
           name: existingCartItem.name,
           price: existingCartItem.price,
           quantity: existingCartItem.quantity - 1,
-          hasImage: existingCartItem.hasImage,
+          pic: existingCartItem.pic,
+          etag: existingCartItem.etag,
+          stock: existingCartItem.stock,
           isVeg: existingCartItem.isVeg,
         ),
       );

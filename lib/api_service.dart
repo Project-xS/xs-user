@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'models.dart';
 
@@ -61,6 +62,7 @@ class ApiService {
     final response = await http.get(uri);
 
     if (response.statusCode == 200 || response.statusCode == 500) {
+      debugPrint('getActiveOrders response: ${response.body}');
       return OrderResponse.fromJson(jsonDecode(response.body));
     } else {
       final errorResponse = jsonDecode(response.body);
@@ -93,6 +95,7 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
+      debugPrint('getItems response: $responseData');
       if (responseData['data'] != null) {
         final List<dynamic> itemsJson = responseData['data'];
         return itemsJson.map((json) => Item.fromJson(json)).toList();

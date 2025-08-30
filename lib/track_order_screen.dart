@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:xs_user/api_service.dart';
+import 'package:xs_user/home_screen.dart';
 import 'package:xs_user/models.dart';
 
 class TrackOrderScreen extends StatefulWidget {
@@ -23,123 +24,146 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Track Order',
-          style: GoogleFonts.montserrat(
-            color: Theme.of(context).textTheme.titleLarge?.color,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (didPop) {
+          return;
+        }
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
+          ),
+          (Route<dynamic> route) => false,
+        );
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HomeScreen(),
+                ),
+                (Route<dynamic> route) => false,
+              );
+            },
+          ),
+          title: Text(
+            'Track Order',
+            style: GoogleFonts.montserrat(
+              color: Theme.of(context).textTheme.titleLarge?.color,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
-      ),
-      body: FutureBuilder<OrderData>(
-        future: _orderFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            final orderData = snapshot.data!;
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Order ID: #${orderData.orderId}',
-                    style: GoogleFonts.montserrat(
-                      color: Theme.of(context).textTheme.titleLarge?.color,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+        body: FutureBuilder<OrderData>(
+          future: _orderFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (snapshot.hasData) {
+              final orderData = snapshot.data!;
+              return Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Order ID: #${orderData.orderId}',
+                      style: GoogleFonts.montserrat(
+                        color: Theme.of(context).textTheme.titleLarge?.color,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Estimated Arrival: ${orderData.deliverAt}',
-                    style: GoogleFonts.montserrat(
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                      fontSize: 14,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Estimated Arrival: ${orderData.deliverAt}',
+                      style: GoogleFonts.montserrat(
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Order Summary',
-                    style: GoogleFonts.montserrat(
-                      color: Theme.of(context).textTheme.titleLarge?.color,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 24),
+                    Text(
+                      'Order Summary',
+                      style: GoogleFonts.montserrat(
+                        color: Theme.of(context).textTheme.titleLarge?.color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: orderData.items.length,
-                    itemBuilder: (context, index) {
-                      final item = orderData.items[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${item.quantity}x ${item.name}',
-                              style: GoogleFonts.montserrat(
-                                color: Theme.of(context).textTheme.bodyMedium?.color,
-                                fontSize: 14,
+                    const SizedBox(height: 8),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: orderData.items.length,
+                      itemBuilder: (context, index) {
+                        final item = orderData.items[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${item.quantity}x ${item.name}',
+                                style: GoogleFonts.montserrat(
+                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Price',
+                          style: GoogleFonts.montserrat(
+                            color: Theme.of(context).textTheme.titleLarge?.color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total Price',
-                        style: GoogleFonts.montserrat(
-                          color: Theme.of(context).textTheme.titleLarge?.color,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          '₹${orderData.totalPrice.toStringAsFixed(2)}',
+                          style: GoogleFonts.montserrat(
+                            color: Theme.of(context).textTheme.titleLarge?.color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '₹${orderData.totalPrice.toStringAsFixed(2)}',
-                        style: GoogleFonts.montserrat(
-                          color: Theme.of(context).textTheme.titleLarge?.color,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                  _buildStatusStep(context, title: 'Order Placed', isCompleted: true),
-                  if (orderData.deliverAt == 'Instant')
-                    _buildStatusStep(context, title: 'Ready to collect', isCompleted: true, isActive: true)
-                  else
-                    _buildStatusStep(context, title: 'Yet to be delivered', isCompleted: true, isActive: true),
-                  _buildStatusStep(context, title: 'Delivered', isCompleted: false),
-                ],
-              ),
-            );
-          } else {
-            return const Center(child: Text('No order data found.'));
-          }
-        },
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    _buildStatusStep(context, title: 'Order Placed', isCompleted: true),
+                    if (orderData.deliverAt == 'Instant')
+                      _buildStatusStep(context, title: 'Ready to collect', isCompleted: true, isActive: true)
+                    else
+                      _buildStatusStep(context, title: 'Yet to be delivered', isCompleted: true, isActive: true),
+                    _buildStatusStep(context, title: 'Delivered', isCompleted: false),
+                  ],
+                ),
+              );
+            } else {
+              return const Center(child: Text('No order data found.'));
+            }
+          },
+        ),
       ),
     );
   }

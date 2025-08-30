@@ -1,18 +1,24 @@
 import 'dart:async';
-
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xs_user/api_service.dart';
+import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/canteen_detail_screen.dart';
 import 'package:xs_user/cart_provider.dart';
 import 'package:xs_user/cart_screen.dart';
+import 'package:xs_user/initialization_service.dart';
+import 'package:xs_user/login_screen.dart';
+import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/notifications_screen.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/profile_screen.dart';
-import 'package:provider/provider.dart';
 import 'package:badges/badges.dart' as badges;
+import 'package:xs_user/canteen_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +29,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  late final InitializationService _initializationService;
 
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreenBody(),
@@ -37,27 +44,94 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (bool didPop, dynamic result) {
-        if (didPop) {
-          return;
-        }
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        } else {
-          SystemNavigator.pop();
-        }
+  void initState() {
+    super.initState();
+    _initializationService =
+        Provider.of<InitializationService>(context, listen: false);
+    _initializationService.addListener(_onInitializationChange);
+    _initializationService.initializeSupabaseAndGoogle();
+  }
+
+  @override
+  void dispose() {
+    _initializationService.removeListener(_onInitializationChange);
+    super.dispose();
+  }
+
+  void _onInitializationChange() async {
+    if (_initializationService.status == InitializationStatus.error) {
+      _showErrorSnackbar("App initialization failed. Please restart.");
+      return;
+    }
+
+    if (_initializationService.status == InitializationStatus.initialized) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session == null) return;
+
+      final bool isSessionValid = await AuthService.isGoogleSessionValid();
+      if (!isSessionValid && mounted) {
+        _showReLoginDialog();
+      }
+    }
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  Future<void> _signOut() async {
+    await GoogleSignIn.instance.signOut();
+    await Supabase.instance.client.auth.signOut();
+  }
+
+  void _showReLoginDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Session Expired"),
+          content: const Text(
+              "Your session has expired or access was revoked. Please sign in again."),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () async {
+                await _signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                        builder: (context) => const LoginScreen()),
+                    (Route<dynamic> route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+        );
       },
-      child: Scaffold(
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
-        selectedItemColor: Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
-        unselectedItemColor: Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
-        selectedLabelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+        backgroundColor:
+            Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+        selectedItemColor:
+            Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
+        unselectedItemColor:
+            Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
+        selectedLabelStyle:
+            GoogleFonts.montserrat(fontWeight: FontWeight.w600),
         unselectedLabelStyle: GoogleFonts.montserrat(),
         items: const [
           BottomNavigationBarItem(
@@ -76,9 +150,10 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
-    ));
+    );
   }
 }
+
 
 class HomeScreenBody extends StatefulWidget {
   const HomeScreenBody({super.key});
@@ -96,8 +171,6 @@ enum SortOption {
 }
 
 class HomeScreenBodyState extends State<HomeScreenBody> {
-  late Future<List<Canteen>> _canteensFuture;
-  List<Canteen> _canteens = [];
   Future<List<Item>>? _searchResults;
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
@@ -106,9 +179,10 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
   @override
   void initState() {
     super.initState();
-    _canteensFuture = ApiService().getActiveCanteens().then((canteens) async {
-      return _canteens = await Future.value(canteens);
-    });
+    final canteenProvider = Provider.of<CanteenProvider>(context, listen: false);
+    canteenProvider.fetchCanteens();
+    canteenProvider.addListener(_onCanteensLoaded);
+
     _searchController.addListener(() {
       if (_debounce?.isActive ?? false) _debounce?.cancel();
       _debounce = Timer(const Duration(milliseconds: 200), () {
@@ -127,9 +201,20 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
 
   @override
   void dispose() {
+    Provider.of<CanteenProvider>(context, listen: false).removeListener(_onCanteensLoaded);
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onCanteensLoaded() {
+    final canteenProvider = Provider.of<CanteenProvider>(context, listen: false);
+    if (!canteenProvider.isLoading && canteenProvider.canteens.isNotEmpty) {
+      final menuProvider = Provider.of<MenuProvider>(context, listen: false);
+      for (var canteen in canteenProvider.canteens) {
+        menuProvider.fetchMenuItems(canteen.id);
+      }
+    }
   }
 
   String getImageUrl(int canteenId) {
@@ -175,7 +260,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
           color: _currentSortOption == option
               ? Theme.of(context).colorScheme.primary
               : Theme.of(context).textTheme.bodyMedium?.color,
-          fontWeight: _currentSortOption == option ? FontWeight.bold : FontWeight.normal,
+          fontWeight:
+              _currentSortOption == option ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       trailing: _currentSortOption == option
@@ -196,11 +282,11 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-
-
   List<Item> _applySortToItems(List<Item> items) {
-    List<Item> availableItems = items.where((item) => item.isAvailable).toList();
-    List<Item> unavailableItems = items.where((item) => !item.isAvailable).toList();
+    List<Item> availableItems =
+        items.where((item) => item.isAvailable).toList();
+    List<Item> unavailableItems =
+        items.where((item) => !item.isAvailable).toList();
 
     Comparator<Item> comparator;
 
@@ -209,7 +295,6 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
       case SortOption.popularity:
-      // Items don't have a direct popularity/rating for now.
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
       case SortOption.priceAsc:
@@ -217,16 +302,18 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
         break;
       case SortOption.veg:
         availableItems = availableItems.where((item) => item.isVeg).toList();
-        unavailableItems = unavailableItems.where((item) => item.isVeg).toList();
+        unavailableItems =
+            unavailableItems.where((item) => item.isVeg).toList();
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
       case SortOption.nonVeg:
         availableItems = availableItems.where((item) => !item.isVeg).toList();
-        unavailableItems = unavailableItems.where((item) => !item.isVeg).toList();
+        unavailableItems =
+            unavailableItems.where((item) => !item.isVeg).toList();
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
     }
-    
+
     availableItems.sort(comparator);
     unavailableItems.sort(comparator);
 
@@ -268,7 +355,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 110,
+          expandedHeight: 80,
           backgroundColor: Colors.transparent,
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
@@ -276,7 +363,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 color: Theme.of(context).appBarTheme.backgroundColor,
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 48, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 5),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -311,7 +398,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                   ),
                 );
               },
-              icon: Icon(Icons.notifications_none_outlined, color: Theme.of(context).iconTheme.color),
+              icon: Icon(Icons.notifications_none_outlined,
+                  color: Theme.of(context).iconTheme.color),
             ),
             Consumer<CartProvider>(
               builder: (_, cart, ch) => badges.Badge(
@@ -331,7 +419,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                     ),
                   );
                 },
-                icon: Icon(Icons.shopping_cart_outlined, color: Theme.of(context).iconTheme.color),
+                icon: Icon(Icons.shopping_cart_outlined,
+                    color: Theme.of(context).iconTheme.color),
               ),
             ),
             SizedBox(width: 7)
@@ -358,7 +447,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                   children: [
                     if (_searchController.text.isNotEmpty)
                       IconButton(
-                        icon: Icon(Icons.clear, color: Theme.of(context).iconTheme.color),
+                        icon: Icon(Icons.clear,
+                            color: Theme.of(context).iconTheme.color),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
@@ -370,7 +460,9 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                     Container(
                       margin: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFF7A3A) : Theme.of(context).primaryColor,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFFFF7A3A)
+                            : Theme.of(context).primaryColor,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: IconButton(
@@ -410,19 +502,18 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                   ),
                 ),
                 if (_searchResults == null)
-                  FutureBuilder<List<Canteen>>(
-                    future: _canteensFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return Text(
-                          '${snapshot.data!.length} canteens available',
-                          style: GoogleFonts.montserrat(
-                            color: Theme.of(context).textTheme.bodyMedium?.color,
-                            fontSize: 12,
-                          ),
-                        );
+                  Consumer<CanteenProvider>(
+                    builder: (context, canteenProvider, child) {
+                      if (canteenProvider.isLoading && canteenProvider.canteens.isEmpty) {
+                        return const SizedBox();
                       }
-                      return const SizedBox();
+                      return Text(
+                        '${canteenProvider.canteens.length} canteens available',
+                        style: GoogleFonts.montserrat(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                          fontSize: 12,
+                        ),
+                      );
                     },
                   ),
               ],
@@ -437,38 +528,35 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
   Widget _buildCanteenList() {
     return SliverPadding(
       padding: const EdgeInsets.all(16),
-      sliver: FutureBuilder<List<Canteen>>(
-        future: _canteensFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      sliver: Consumer<CanteenProvider>(
+        builder: (context, canteenProvider, child) {
+          if (canteenProvider.isLoading && canteenProvider.canteens.isEmpty) {
             return const SliverToBoxAdapter(
               child: Center(child: CircularProgressIndicator()),
             );
-          } else if (snapshot.hasError) {
+          }
+
+          if (canteenProvider.canteens.isEmpty) {
             return SliverToBoxAdapter(
-              child: Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Theme.of(context).colorScheme.error))),
-            );
-          } else if (snapshot.hasData) {
-            final canteens = snapshot.data!;
-            if (canteens.isEmpty) {
-              return SliverToBoxAdapter(
-                child: Center(child: Text('No canteens found.', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color))),
-              );
-            }
-            return SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final canteen = _canteens[index];
-                  return _buildCanteenCard(context, canteen);
-                },
-                childCount: canteens.length,
-              ),
-            );
-          } else {
-            return SliverToBoxAdapter(
-              child: Center(child: Text('No canteens found.', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color))),
+              child: Center(
+                  child: Text('No canteens found.',
+                      style: TextStyle(
+                          color: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.color))),
             );
           }
+
+          return SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final canteen = canteenProvider.canteens[index];
+                return _buildCanteenCard(context, canteen);
+              },
+              childCount: canteenProvider.canteens.length,
+            ),
+          );
         },
       ),
     );
@@ -488,7 +576,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
             return SliverToBoxAdapter(
               child: Center(child: Text('Error: ${snapshot.error}')),
             );
-          } else if (snapshot.hasData){
+          } else if (snapshot.hasData) {
             List<Item> items = snapshot.data!;
             items = _applySortToItems(items);
             if (items.isEmpty) {
@@ -500,7 +588,16 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final item = items[index];
-                  final canteen = _canteens.firstWhere((c) => c.id == item.canteenId, orElse: () => Canteen(id: 0, name: 'Unknown', location: '', rating: 0, hasImage: false));
+                  final canteens = Provider.of<CanteenProvider>(context, listen: false).canteens;
+                  final canteen = canteens.firstWhere(
+                      (c) => c.id == item.canteenId,
+                      orElse: () => Canteen(
+                          id: 0,
+                          name: 'Unknown',
+                          location: '',
+                          rating: 0,
+                          etag: null,
+                          pic: null));
                   return _buildMenuItem(item: item, canteenName: canteen.name);
                 },
                 childCount: items.length,
@@ -508,7 +605,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
             );
           } else {
             return const SliverToBoxAdapter(
-              child: Center(child: Text('Search for something to get results.')),
+              child:
+                  Center(child: Text('Search for something to get results.')),
             );
           }
         },
@@ -519,7 +617,9 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
   Widget _buildMenuItem({required Item item, required String canteenName}) {
     return Consumer<CartProvider>(
       builder: (context, cart, child) {
-        final cartItem = cart.items.containsKey(item.id.toString()) ? cart.items[item.id.toString()] : null;
+        final cartItem = cart.items.containsKey(item.id.toString())
+            ? cart.items[item.id.toString()]
+            : null;
         final bool canAddItem = item.isAvailable && item.stock > 0;
 
         return Container(
@@ -536,8 +636,10 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 borderRadius: BorderRadius.circular(12),
                 child: ColorFiltered(
                   colorFilter: item.isAvailable
-                      ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
-                      : ColorFilter.mode(Colors.black.withAlpha((255 * 0.9).round()), BlendMode.saturation),
+                      ? const ColorFilter.mode(
+                          Colors.transparent, BlendMode.multiply)
+                      : ColorFilter.mode(Colors.black.withAlpha((255 * 0.9).round()),
+                          BlendMode.saturation),
                   child: Container(
                     width: 70,
                     height: 70,
@@ -545,7 +647,9 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                     child: Stack(
                       children: [
                         Image.asset(
-                          item.isVeg ? 'assets/veg.jpg' : 'assets/non_veg.jpg',
+                          item.isVeg
+                              ? 'assets/veg.jpg'
+                              : 'assets/non_veg.jpg',
                           width: 70,
                           height: 70,
                           fit: BoxFit.cover,
@@ -559,7 +663,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                                   'Out of Stock',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.montserrat(
-                                    color: const Color.fromARGB(165, 255, 255, 255),
+                                    color: const Color.fromARGB(
+                                        165, 255, 255, 255),
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -567,38 +672,6 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                               ),
                             ),
                           ),
-                        // if (item.hasImage)
-                        //   Image.network(
-                        //     '${ApiService.baseUrl}/assets/item_${item.id}',
-                        //     width: 70,
-                        //     height: 70,
-                        //     fit: BoxFit.cover,
-                        //     errorBuilder: (context, error, stackTrace) {
-                        //       return Container(
-                        //         width: 70,
-                        //         height: 70,
-                        //         color: Colors.grey.withAlpha((255 * 0.1).round()),
-                        //         child: Center(
-                        //           child: Icon(
-                        //             Icons.fastfood,
-                        //             color: item.isAvailable
-                        //         ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary)
-                        //         : Theme.of(context).iconTheme.color,
-                        //             size: 30,
-                        //           ),
-                        //         ),
-                        //       );
-                        //     },
-                        //   ),
-                        // Center(
-                        //   child: Icon(
-                        //     Icons.fastfood,
-                        //     color: item.isAvailable
-                        //         ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary)
-                        //         : Theme.of(context).iconTheme.color,
-                        //     size: 30,
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),
@@ -630,7 +703,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                           child: Text(
                             item.name,
                             style: GoogleFonts.montserrat(
-                              color: Theme.of(context).textTheme.titleLarge?.color,
+                              color:
+                                  Theme.of(context).textTheme.titleLarge?.color,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -680,15 +754,25 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                         height: 40,
                         child: ElevatedButton(
                           onPressed: () {
-                            cart.addItem(item.id.toString(), item.name, item.price, item.canteenId, item.hasImage, item.isVeg);
+                            cart.addItem(
+                                item.id.toString(),
+                                item.name,
+                                item.price,
+                                item.canteenId,
+                                item.pic,
+                                item.etag,
+                                item.isVeg,
+                                item.stock);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
                             shape: const CircleBorder(),
                             padding: EdgeInsets.zero,
                             elevation: 4,
                           ),
-                          child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
+                          child: Icon(Icons.add,
+                              color: Theme.of(context).colorScheme.onPrimary),
                         ),
                       )
                     : Row(
@@ -697,7 +781,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                             onPressed: () {
                               cart.removeSingleItem(item.id.toString());
                             },
-                            icon: Icon(Icons.remove_circle_outline, color: Theme.of(context).iconTheme.color),
+                            icon: Icon(Icons.remove_circle_outline,
+                                color: Theme.of(context).iconTheme.color),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -705,7 +790,10 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                           Text(
                             cartItem.quantity.toString(),
                             style: GoogleFonts.montserrat(
-                              color: Theme.of(context).textTheme.titleMedium?.color,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.color,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -713,9 +801,18 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                           const SizedBox(width: 8),
                           IconButton(
                             onPressed: () {
-                              cart.addItem(item.id.toString(), item.name, item.price, item.canteenId, item.hasImage, item.isVeg);
+                              cart.addItem(
+                                  item.id.toString(),
+                                  item.name,
+                                  item.price,
+                                  item.canteenId,
+                                  item.pic,
+                                  item.etag,
+                                  item.isVeg,
+                                  item.stock);
                             },
-                            icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
+                            icon: Icon(Icons.add_circle_outline,
+                                color: Theme.of(context).colorScheme.primary),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -736,139 +833,145 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
       },
     );
   }
-  }
+}
 
-  Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CanteenDetailScreen(canteen: canteen),
-          ),
-        );
-      },
-      child: Hero(
-        tag: 'canteen_image_${canteen.id}',
-        child: Container(
-          height: 220,
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                offset: const Offset(0, 6),
-                blurRadius: 20,
-                color: Theme.of(context).colorScheme.onSurface.withAlpha((255 * 0.1).round()),
+Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CanteenDetailScreen(canteen: canteen),
+        ),
+      );
+    },
+    child: Hero(
+      tag: 'canteen_image_${canteen.id}',
+      child: Container(
+        height: 220,
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              offset: const Offset(0, 6),
+              blurRadius: 20,
+              color:
+                  Theme.of(context).colorScheme.onSurface.withAlpha((255 * 0.1).round()),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              Center(
+                child: (canteen.pic != null)? ExtendedImage.network(canteen.pic!, 
+                  cacheKey: canteen.etag,
+                  cache: true,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                ):
+                Icon(Icons.store),
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              children: [
-                Center(
-                  child: Image.asset(
-                    'assets/${canteen.id}.jpg',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withAlpha(153),
+                    ],
                   ),
                 ),
-                Container(
+              ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withAlpha(153),
-                      ],
-                    ),
+                    color: Colors.black.withAlpha(128),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(128),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          canteen.rating.toStringAsFixed(1),
-                          style: GoogleFonts.montserrat(color: Colors.white, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 16,
-                  left: 16,
-                  right: 16,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
                       Text(
-                        canteen.name,
-                        style: GoogleFonts.montserrat(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 10.0,
-                              color: Colors.black,
-                              offset: Offset(5.0, 5.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        canteen.location,
-                        style: GoogleFonts.montserrat(
-                          color: Colors.white,
-                          fontSize: 14,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 10.0,
-                              color: Colors.black,
-                              offset: Offset(5.0, 5.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFFFF7A3A)
-                              : Theme.of(context).primaryColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Open',
-                          style: GoogleFonts.montserrat(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600),
-                        ),
+                        canteen.rating.toStringAsFixed(1),
+                        style:
+                            GoogleFonts.montserrat(color: Colors.white, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      canteen.name,
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 10.0,
+                            color: Colors.black,
+                            offset: Offset(5.0, 5.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      canteen.location,
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white,
+                        fontSize: 14,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 10.0,
+                            color: Colors.black,
+                            offset: Offset(5.0, 5.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFFFF7A3A)
+                            : Theme.of(context).primaryColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Open',
+                        style: GoogleFonts.montserrat(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}

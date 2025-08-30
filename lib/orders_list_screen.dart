@@ -1,9 +1,11 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:xs_user/api_service.dart';
 import 'package:xs_user/home_screen.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/track_order_screen.dart';
+import 'package:xs_user/order_provider.dart';
+import 'package:provider/provider.dart';
 
 class OrdersListScreen extends StatefulWidget {
   final bool showBackButton;
@@ -15,57 +17,72 @@ class OrdersListScreen extends StatefulWidget {
 }
 
 class _OrdersListScreenState extends State<OrdersListScreen> {
-  late Future<OrderResponse> _ordersFuture;
-
   @override
   void initState() {
     super.initState();
-    // TODO: Get userId from shared preferences
-    _ordersFuture = ApiService().getActiveOrders(userId: 1);
+    // TODO: Get userId from shared preferences else rfid
+    Provider.of<OrderProvider>(context, listen: false).fetchOrders(1);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        elevation: 0,
-        leading: widget.showBackButton
-            ? IconButton(
-                icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
-                onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const HomeScreen(),
-                    ),
-                    (route) => false,
-                  );
-                },
-              )
-            : null,
-        title: Text(
-          'My Orders',
-          style: GoogleFonts.montserrat(
-            color: Theme.of(context).textTheme.titleLarge?.color,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (didPop) {
+          return;
+        }
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(),
+          ),
+          (route) => false,
+        );
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          elevation: 0,
+          leading: widget.showBackButton
+              ? IconButton(
+                  icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                )
+              : null,
+          title: Text(
+            'My Orders',
+            style: GoogleFonts.montserrat(
+              color: Theme.of(context).textTheme.titleLarge?.color,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
-      ),
-      body: FutureBuilder<OrderResponse>(
-        future: _ordersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            final List<OrderData>? orders = snapshot.data!.data;
-            if (orders == null || orders.isEmpty) {
+        body: Consumer<OrderProvider>(
+          builder: (context, orderProvider, child) {
+            if (orderProvider.isLoading && orderProvider.orderResponse == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (orderProvider.error != null) {
+              return Center(child: Text('Error: ${orderProvider.error}'));
+            }
+
+            if (orderProvider.orderResponse == null || orderProvider.orderResponse!.data == null || orderProvider.orderResponse!.data!.isEmpty) {
               return const Center(child: Text('No orders found.'));
             }
+
+            final List<OrderData> orders = orderProvider.orderResponse!.data!;
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: orders.length,
@@ -73,10 +90,8 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                 return _buildOrderCard(context, orderData: orders[index]);
               },
             );
-          } else {
-            return const Center(child: Text('No orders found.'));
-          }
-        },
+          },
+        ),
       ),
     );
   }
@@ -129,8 +144,10 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
-                      child: CircleAvatar(
-                        child: Text(orderData.items[index].name.substring(0, 1)),
+                      child: (orderData.items[index].pic != null)? CircleAvatar(
+                        child: ExtendedImage.network(orderData.items[index].pic!, fit: BoxFit.cover, cache: true, cacheKey: orderData.items[index].etag))
+                            : CircleAvatar(
+                                child: Text(orderData.items[index].name.substring(0, 1)),
                       ),
                     );
                   },

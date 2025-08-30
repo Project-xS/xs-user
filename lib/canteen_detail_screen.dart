@@ -1,11 +1,13 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:badges/badges.dart' as badges;
-import 'package:xs_user/api_service.dart';
 import 'package:xs_user/cart_provider.dart';
 import 'package:xs_user/cart_screen.dart';
 import 'package:xs_user/models.dart';
+import 'package:xs_user/menu_provider.dart';
+
 
 class CanteenDetailScreen extends StatefulWidget {
   final Canteen canteen;
@@ -25,16 +27,12 @@ enum SortOption {
 }
 
 class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
-  late Future<List<Item>> _itemsFuture;
   SortOption _currentSortOption = SortOption.name;
-  
 
   @override
   void initState() {
     super.initState();
-    _itemsFuture = ApiService().getItemsByCanteenId(widget.canteen.id).then((items) {
-      return _applySortToItems(items);
-    });
+    Provider.of<MenuProvider>(context, listen: false).fetchMenuItems(widget.canteen.id);
   }
 
     List<Item> _applySortToItems(List<Item> items) {
@@ -48,7 +46,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
       case SortOption.popularity:
-        // Items don't have popularity for now.
+        // TODO: Items don't have popularity for now.
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
       case SortOption.priceAsc:
@@ -129,29 +127,17 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // if (widget.canteen.hasImage)
-                  //   Image.network(
-                  //     '${ApiService.baseUrl}/assets/canteen_${widget.canteen.id}',
-                  //     fit: BoxFit.cover,
-                  //     errorBuilder: (context, error, stackTrace) {
-                  //       return Container(
-                  //         color: Colors.grey.withAlpha((255 * 0.1).round()),
-                  //         child: const Icon(
-                  //           Icons.store,
-                  //           color: Colors.white,
-                  //           size: 80,
-                  //         ),
-                  //       );
-                  //     },
-                  //   ),
+                  (widget.canteen.pic != null)?
+                    ExtendedImage.network(
+                      widget.canteen.pic!,
+                      cache: true,
+                      cacheKey: widget.canteen.etag,
+                      fit: BoxFit.cover,
+                    ):
                 Center(
-                      child: Image.asset(
-                        'assets/${widget.canteen.id}.jpg',
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    ),                  Container(
+                      child: Icon(Icons.store)
+                    ),
+                Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -254,9 +240,6 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                   if (newValue != null) {
                     setState(() {
                       _currentSortOption = newValue;
-                      _itemsFuture = ApiService().getItemsByCanteenId(widget.canteen.id).then((items) {
-                        return _applySortToItems(items);
-                      });
                     });
                   }
                 },
@@ -298,15 +281,10 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
           ),
         ),
         Expanded(
-          child: FutureBuilder<List<Item>>(
-            future: _itemsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              } else if (snapshot.hasData) {
-                List<Item> items = snapshot.data!;
+          child: Consumer<MenuProvider>(
+            builder: (context, menuProvider, child) {
+              if (menuProvider.getMenuItems(widget.canteen.id).isNotEmpty){
+                List<Item> items = _applySortToItems(menuProvider.getMenuItems(widget.canteen.id));
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
@@ -318,9 +296,28 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                     );
                   },
                 );
-              } else {
+              }
+              if (menuProvider.isLoading && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
                 return const Center(child: Text('No items found.'));
               }
+
+              List<Item> items = _applySortToItems(menuProvider.getMenuItems(widget.canteen.id));
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return _buildMenuItem(
+                    item: item,
+                    canteenId: widget.canteen.id,
+                  );
+                },
+              );
             },
           ),
         ),
@@ -329,82 +326,79 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   }
 
   Widget _buildReviewsTab(BuildContext context) {
-    return FutureBuilder<List<Item>>(
-      future: _itemsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    return Consumer<MenuProvider>(
+      builder: (context, menuProvider, child) {
+        if (menuProvider.isLoading && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
           return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (snapshot.hasData) {
-          final items = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index % items.length];
-              return Card(
-                color: Theme.of(context).cardColor,
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: 
-                            // item.hasImage
-                            //     ? Image.network(
-                            //         '${ApiService.baseUrl}/assets/item_${item.id}',
-                            //         width: 50,
-                            //         height: 50,
-                            //         fit: BoxFit.cover,
-                            //       )
-                            //     :
-                                 Container(
-                                    width: 50,
-                                    height: 50,
-                                    color: Colors.grey.withAlpha((255 * 0.1).round()),
-                                    child: Icon(Icons.fastfood, color: Theme.of(context).iconTheme.color, size: 20),
-                                  ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              item.name,
-                              style: GoogleFonts.montserrat(
-                                color: Theme.of(context).textTheme.titleLarge?.color,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: List.generate(5, (i) => Icon(Icons.star, color: i < 4 ? const Color(0xFFFFCB44) : Theme.of(context).iconTheme.color?.withAlpha((255 * 0.5).round()), size: 16)),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'This is a great dish! Highly recommended.',
-                        style: GoogleFonts.montserrat(
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        } else {
+        }
+
+        if (menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
           return const Center(child: Text('No reviews found.'));
         }
+
+        final items = menuProvider.getMenuItems(widget.canteen.id);
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final Item item = items[index % items.length];
+            return Card(
+              color: Theme.of(context).cardColor,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: 
+                          (item.pic != null)? ExtendedImage.network(
+                            item.pic!,
+                            cache: true,
+                            cacheKey: item.etag,
+                            width: 50,
+                            height: 50,
+                          ): Container(
+                            width: 50,
+                            height: 50,
+                            color: Colors.grey.withAlpha((255 * 0.1).round()),
+                            child: Icon(Icons.fastfood, color: Theme.of(context).iconTheme.color, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            style: GoogleFonts.montserrat(
+                              color: Theme.of(context).textTheme.titleLarge?.color,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: List.generate(5, (i) => Icon(Icons.star, color: i < 4 ? const Color(0xFFFFCB44) : Theme.of(context).iconTheme.color?.withAlpha((255 * 0.5).round()), size: 16)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This is a great dish! Highly recommended.',
+                      style: GoogleFonts.montserrat(
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
       },
     );
   }
@@ -427,7 +421,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
     return Consumer<CartProvider>(
       builder: (context, cart, child) {
         final cartItem = cart.items.containsKey(item.id.toString()) ? cart.items[item.id.toString()] : null;
-        final bool canAddItem = item.isAvailable && item.stock > 0;
+        final bool canAddItem = item.isAvailable && (item.stock > 0 || item.stock == -1);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -451,12 +445,22 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                     color: Colors.grey.withAlpha((255 * 0.1).round()),
                     child: Stack(
                       children: [
-                        Image.asset(
-                          item.isVeg ? 'assets/veg.jpg' : 'assets/non_veg.jpg',
+                        (item.pic != null)? ExtendedImage.network(
+                          item.pic!,
+                          cacheKey: item.etag,
+                          cache: true,
                           width: 70,
                           height: 70,
                           fit: BoxFit.cover,
-                        ),
+                        ): Center(
+                            child: Icon(
+                              Icons.fastfood,
+                              color: item.isAvailable
+                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary)
+                                  : Theme.of(context).iconTheme.color,
+                              size: 30,
+                            ),
+                          ),
                         if (!item.isAvailable)
                           Positioned.fill(
                             child: Container(
@@ -474,38 +478,6 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                               ),
                             ),
                           ),
-                        // if (item.hasImage)
-                        //   Image.network(
-                        //     '${ApiService.baseUrl}/assets/item_${item.id}',
-                        //     width: 70,
-                        //     height: 70,
-                        //     fit: BoxFit.cover,
-                        //     errorBuilder: (context, error, stackTrace) {
-                        //       return Container(
-                        //         width: 70,
-                        //         height: 70,
-                        //         color: Colors.grey.withAlpha((255 * 0.1).round()),
-                        //         child: Center(
-                        //           child: Icon(
-                        //             Icons.fastfood,
-                        //             color: item.isAvailable
-                        //         ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary)
-                        //         : Theme.of(context).iconTheme.color,
-                        //             size: 30,
-                        //           ),
-                        //         ),
-                        //       );
-                        //     },
-                        //   ),
-                        // Center(
-                        //   child: Icon(
-                        //     Icons.fastfood,
-                        //     color: item.isAvailable
-                        //         ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary)
-                        //         : Theme.of(context).iconTheme.color,
-                        //     size: 30,
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),
@@ -518,21 +490,20 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                   children: [
                     Row(
                       children: [
-                        if (item.isVeg)
                           Container(
                             width: 16,
                             height: 16,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1BB05A),
+                              color: (item.isVeg)? Color(0xFF1BB05A): Colors.red,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Icon(
-                              Icons.eco,
+                            child: Icon(
+                              (item.isVeg)? Icons.eco: Icons.kebab_dining,
                               color: Colors.white,
                               size: 12,
                             ),
                           ),
-                        if (item.isVeg) const SizedBox(width: 6),
+                        const SizedBox(width: 6),
                         Flexible(
                           child: Text(
                             item.name,
@@ -548,7 +519,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.description ?? '',
+                      (item.stock == -1)?"Available":"${(item.isAvailable)?item.stock:0} items left",
                       style: GoogleFonts.montserrat(
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                         fontSize: 12,
@@ -576,7 +547,13 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                         height: 40,
                         child: ElevatedButton(
                           onPressed: () {
-                            cart.addItem(item.id.toString(), item.name, item.price, canteenId, item.hasImage, item.isVeg);
+                            if (cartItem == null || cartItem.quantity < 20) {
+                              cart.addItem(item.id.toString(), item.name, item.price, canteenId, item.pic, item.etag, item.isVeg, item.stock);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('You can only add up to 20 of each item.')),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).colorScheme.primary,
@@ -609,7 +586,13 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                           const SizedBox(width: 8),
                           IconButton(
                             onPressed: () {
-                              cart.addItem(item.id.toString(), item.name, item.price, canteenId, item.hasImage, item.isVeg);
+                              if (cartItem.quantity < 20) {
+                                cart.addItem(item.id.toString(), item.name, item.price, canteenId, item.pic, item.etag, item.isVeg, item.stock);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('You can only add up to 20 of each item.')),
+                                );
+                              }
                             },
                             icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
                             padding: EdgeInsets.zero,

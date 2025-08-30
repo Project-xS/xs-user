@@ -5,12 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/cart_provider.dart';
-import 'package:xs_user/login_screen.dart';
+import 'package:xs_user/initialization_service.dart';
+import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/orders_list_screen.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:ui';
 import 'dart:async';
+import 'package:xs_user/order_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -18,6 +18,7 @@ class CheckoutScreen extends StatefulWidget {
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
+
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   String _paymentMethod = 'upi';
@@ -49,38 +50,108 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _isPlacingOrder = true;
       _orderError = null;
     });
+
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    if (cart.items.isEmpty || cart.totalAmount == 0) {
+      setState(() {
+        _orderError = 'Your cart is empty or the total amount is zero.';
+        _isPlacingOrder = false;
+      });
+      return;
+    }
+
+    final initializationService = InitializationService();
+    if (initializationService.status == InitializationStatus.initializing) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text("Verifying..."),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final completer = Completer<void>();
+      void listener() {
+        if (initializationService.status != InitializationStatus.initializing) {
+          completer.complete();
+          initializationService.removeListener(listener);
+        }
+      }
+      initializationService.addListener(listener);
+      await completer.future;
+      if(mounted) Navigator.of(context).pop();
+    }
+    if (initializationService.status == InitializationStatus.error) {
+       setState(() {
+        _orderError = 'Initialization failed. Please restart the app.';
+        _isPlacingOrder = false;
+      });
+      return;
+    }
+
     final bool isSessionValid = await AuthService.isGoogleSessionValid();
-    if (!isSessionValid) {
+    if (isSessionValid == false) {
       setState(() {
         _orderError = 'Your Google session has expired. Please login again.';
         _isPlacingOrder = false;
       });
       return;
     }
-    final cart = Provider.of<CartProvider>(context, listen: false);
     if (cart.items.isEmpty) {
        setState(() {
         _isPlacingOrder = false;
       });
       return;
     }
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) {
+    bool? validsession = await AuthService.isGoogleSessionValid();
+    if (validsession == false) {
       setState(() {
         _orderError = 'You are not signed in. Please sign in to place an order.';
         _isPlacingOrder = false;
       });
       return;
     }
+    final menuProvider = Provider.of<MenuProvider>((mounted)?context:context, listen: false);
+    final canteenId = cart.canteenId;
 
-    final itemIds = cart.items.values.expand((item) {
-      return List.generate(item.quantity, (_) => int.parse(item.id));
-    }).toList();
-
-    final deliverAt = _orderType == 'preorder' ? _selectedTimeBand : "11:00am - 12:00pm";
-    const userId = 1;
+    if (canteenId == null) {
+      setState(() {
+        _orderError = 'Could not determine the canteen.';
+        _isPlacingOrder = false;
+      });
+      return;
+    }
 
     try {
+      await menuProvider.fetchMenuItems(canteenId, force: true);
+
+      for (final cartItem in cart.items.values) {
+        final menuItem = menuProvider.getMenuItems(canteenId).firstWhere((item) => item.id.toString() == cartItem.id);
+        if (!menuItem.isAvailable || (menuItem.stock != -1 && menuItem.stock < cartItem.quantity)) {
+          setState(() {
+            _orderError = '${menuItem.name} is out of stock or chosen quantity is not available.';
+            _isPlacingOrder = false;
+          });
+          return;
+        }
+      }
+
+      final itemIds = cart.items.values.expand((item) {
+        return List.generate(item.quantity, (_) => int.parse(item.id));
+      }).toList();
+
+      final deliverAt = _orderType == 'preorder' ? _selectedTimeBand : "11:00am - 12:00pm";
+      const userId = 1;
+
       final response = await ApiService().createOrder(userId, itemIds, deliverAt);
       if (response.status == 'ok') {
         setState(() {
@@ -138,6 +209,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
         Timer(const Duration(seconds: 5), () {
           Navigator.of(context).pop();
+          Provider.of<OrderProvider>(context, listen: false).fetchOrders(userId, force: true);
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(

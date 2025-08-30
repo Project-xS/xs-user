@@ -19,7 +19,8 @@ class OrderItem {
   final String name;
   final int quantity;
   final bool isVeg;
-  final bool? picLink;
+  final String? pic;
+  final String? etag;
   final String? description;
 
   OrderItem({
@@ -27,7 +28,8 @@ class OrderItem {
     required this.name,
     required this.quantity,
     required this.isVeg,
-    this.picLink,
+    required this.pic,
+    required this.etag,
     this.description,
   });
 
@@ -37,7 +39,8 @@ class OrderItem {
       name: json['name'],
       quantity: json['quantity'],
       isVeg: json['is_veg'],
-      picLink: json['pic_link'] as bool?,
+      pic: json['pic_link'],
+      etag: json['pic_etag'],
       description: json['description'],
     );
   }
@@ -60,7 +63,7 @@ class OrderData {
     return OrderData(
       orderId: json['order_id'],
       totalPrice: json['total_price'],
-      deliverAt: json['deliver_at'],
+      deliverAt: json['deliver_at'].toString(),
       items: (json['items'] as List).map((item) => OrderItem.fromJson(item)).toList(),
     );
   }
@@ -133,14 +136,16 @@ class Canteen {
   final int id;
   final String name;
   final String location;
-  final bool hasImage;
+  final String? pic;
+  final String? etag;
   final double rating;
 
   Canteen({
     required this.id,
     required this.name,
     required this.location,
-    required this.hasImage,
+    required this.pic,
+    required this.etag,
     required this.rating,
   });
 
@@ -149,7 +154,8 @@ class Canteen {
       id: json['canteen_id'],
       name: json['canteen_name'],
       location: json['location'],
-      hasImage: json['pic_link'] ?? false,
+      pic: json['pic_link'],
+      etag: json['pic_etag'],
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
     );
   }
@@ -160,7 +166,8 @@ class Item {
   final String name;
   final String? description;
   final double price;
-  final bool hasImage;
+  final String? pic;
+  final String? etag;
   final int canteenId;
   final bool isVeg;
   final bool isAvailable;
@@ -171,7 +178,8 @@ class Item {
     required this.name,
     this.description,
     required this.price,
-    required this.hasImage,
+    required this.pic,
+    required this.etag,
     required this.canteenId,
     required this.isVeg,
     required this.isAvailable,
@@ -184,10 +192,11 @@ class Item {
       name: json['name'],
       description: json['description'],
       price: (json['price'] as num).toDouble(),
-      hasImage: json['pic_link'] ?? false,
+      pic: json['pic_link'],
+      etag: json['pic_etag'],
       canteenId: json['canteen_id'],
       isVeg: json['is_veg'],
-      isAvailable: json['is_available'],
+      isAvailable: json['is_available'] || json['stock'] == -1,
       stock: json['stock'],
     );
   }

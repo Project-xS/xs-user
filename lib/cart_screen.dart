@@ -1,3 +1,4 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -100,41 +101,26 @@ class CartScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              item.isVeg ? 'assets/veg.jpg' : 'assets/non_veg.jpg',
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-            ),
-            // item.hasImage
-            //     ? Image.network(
-            //         '${ApiService.baseUrl}/assets/item_${item.id}',
-            //         width: 80,
-            //         height: 80,
-            //         fit: BoxFit.cover,
-            //         errorBuilder: (context, error, stackTrace) {
-            //           return Container(
-            //             width: 80,
-            //             height: 80,
-            //             color: Colors.grey.withOpacity(0.1),
-            //             child: Icon(
-            //               Icons.fastfood,
-            //               color: Theme.of(context).iconTheme.color,
-            //               size: 40,
-            //             ),
-            //           );
-            //         },
-            //       )
-            //     : Container(
-            //         width: 80,
-            //         height: 80,
-            //         color: Colors.grey.withOpacity(0.1),
-            //         child: Icon(
-            //           Icons.fastfood,
-            //           color: Theme.of(context).iconTheme.color,
-            //           size: 40,
-            //         ),
-            //       ),
+            child: 
+            item.pic!=null
+                ? ExtendedImage.network(
+                    item.pic!,
+                    cache: true,
+                    cacheKey: item.etag,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    width: 80,
+                    height: 80,
+                    color: const Color.fromARGB(119, 158, 158, 158),
+                    child: Icon(
+                      Icons.fastfood,
+                      color: Theme.of(context).iconTheme.color,
+                      size: 40,
+                    ),
+                  ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -179,7 +165,7 @@ class CartScreen extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () {
-                  cart.addItem(item.id, item.name, item.price, cart.canteenId!, item.hasImage, item.isVeg);
+                  cart.addItem(item.id, item.name, item.price, cart.canteenId!, item.pic, item.etag, item.isVeg, item.stock);
                 },
                 icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
               ),

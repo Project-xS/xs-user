@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:xs_user/initialization_service.dart';
 import 'package:xs_user/login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -13,6 +16,85 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _isCompleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final initializationService =
+        Provider.of<InitializationService>(context, listen: false);
+    Future.microtask(() => initializationService.initializeSupabaseAndGoogle());
+  }
+
+  Future<void> _completeOnboarding() async {
+    if (_isCompleting) return;
+    setState(() {
+      _isCompleting = true;
+    });
+
+    final initializationService =
+        Provider.of<InitializationService>(context, listen: false);
+
+    if (initializationService.status != InitializationStatus.initialized) {
+      final completer = Completer<void>();
+
+      void listener() {
+        if (initializationService.status == InitializationStatus.initialized ||
+            initializationService.status == InitializationStatus.error) {
+          if (!completer.isCompleted) completer.complete();
+          initializationService.removeListener(listener);
+        }
+      }
+
+      initializationService.addListener(listener);
+
+      try {
+        await completer.future.timeout(const Duration(seconds: 15));
+      } catch (_) {
+        initializationService.removeListener(listener);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Initialization timeout. Please try again."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() => _isCompleting = false);
+        return;
+      }
+    }
+
+    if (initializationService.status == InitializationStatus.error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Initialization failed. Please try again."),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() => _isCompleting = false);
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenOnboarding', true);
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,14 +106,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Align(
               alignment: Alignment.topRight,
               child: TextButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
-                    ),
-                  );
-                },
+                onPressed: _isCompleting ? null : _completeOnboarding,
                 child: Text(
                   'Skip',
                   style: GoogleFonts.montserrat(
@@ -93,18 +168,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 20),
             GestureDetector(
               onTap: () {
+                if (_isCompleting) return;
                 if (_currentPage < 2) {
                   _pageController.nextPage(
                     duration: const Duration(milliseconds: 500),
                     curve: Curves.ease,
                   );
                 } else {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const LoginScreen(),
-                    ),
-                  );
+                  _completeOnboarding();
                 }
               },
               child: Container(
@@ -123,25 +194,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _currentPage == 2 ? 'Get Started' : 'Next',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (_currentPage != 2)
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                  ],
+                child: Center(
+                  child: _isCompleting
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _currentPage == 2 ? 'Get Started' : 'Next',
+                              style: GoogleFonts.montserrat(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (_currentPage != 2)
+                              const Icon(
+                                Icons.arrow_forward_ios,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -252,3 +327,5 @@ class OnboardingPage extends StatelessWidget {
     );
   }
 }
+
+

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Xs User</string>
+	<string>Namma Canteen</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>xs_user</string>
+	<string>Namma_Canteen</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -53,6 +53,14 @@
 				<string>com.nammacanteen.user</string>
 			</array>
 		</dict>
+		<dict>
+    		<key>CFBundleTypeRole</key>
+    		<string>Editor</string>
+    		<key>CFBundleURLSchemes</key>
+			<array>
+			<string>com.googleusercontent.apps.554481401569-v1n0t98lu53vm9rhd4t65r9cedd92uur</string>
+			</array>
+  </dict>
 	</array>
 </dict>
 </plist>

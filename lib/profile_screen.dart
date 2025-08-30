@@ -1,3 +1,4 @@
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -9,7 +10,6 @@ import 'package:xs_user/models.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/theme_provider.dart';
 import 'package:xs_user/help_and_support_screen.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -80,12 +80,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (snapshot.hasData) {
             final user = snapshot.data!;
+            String cacheKey = user.name.substring(0,1).toUpperCase();
+            if (user.profilePictureUrl != null){
+              cacheKey = user.profilePictureUrl!.split('=').first.split('/').last;
+            }
             return Column(
               children: [
                 const SizedBox(height: 24),
                 CircleAvatar(
                   radius: 48,
-                  backgroundImage:CachedNetworkImageProvider(user.profilePictureUrl!),
+                  backgroundImage: ExtendedImage.network(user.profilePictureUrl!, cacheKey: cacheKey, cache: true).image,
                   child: user.profilePictureUrl == null
                       ? Icon(Icons.person, size: 48, color: Theme.of(context).iconTheme.color)
                       : null,
@@ -108,6 +112,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+                ListTile(
+                  onTap: () {
+                    themeProvider.toggleTheme(themeProvider.themeMode == ThemeMode.light);
+                  },
+                  leading: Icon(
+                    themeProvider.themeMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
+                  title: Text(
+                    'Dark Mode',
+                    style: GoogleFonts.montserrat(
+                      color: Theme.of(context).textTheme.titleMedium?.color,
+                      fontSize: 16,
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: themeProvider.themeMode == ThemeMode.dark,
+                    onChanged: (value) {
+                      themeProvider.toggleTheme(value);
+                    },
+                    activeColor: const Color(0xFFFF6B35),
+                    inactiveThumbColor: Colors.grey[400],
+                    inactiveTrackColor: Colors.grey[600],
+                  ),
+                ),
+                // const SizedBox(height: 16),
                 _buildProfileMenuItem(
                   context,
                   icon: Icons.receipt_long,
@@ -133,26 +163,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     );
                   },
-                ),
-                ListTile(
-                  leading: Icon(
-                    themeProvider.themeMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
-                    color: Theme.of(context).iconTheme.color,
-                  ),
-                  title: Text(
-                    'Dark Mode',
-                    style: GoogleFonts.montserrat(
-                      color: Theme.of(context).textTheme.titleMedium?.color,
-                      fontSize: 16,
-                    ),
-                  ),
-                  trailing: Switch(
-                    value: themeProvider.themeMode == ThemeMode.dark,
-                    onChanged: (value) {
-                      themeProvider.toggleTheme(value);
-                    },
-                    activeColor: Theme.of(context).primaryColor,
-                  ),
                 ),
                 _buildProfileMenuItem(
                   context,

@@ -1,35 +1,34 @@
-import 'package:xs_user/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xs_user/cart_provider.dart';
 import 'package:xs_user/home_screen.dart';
-import 'package:xs_user/login_screen.dart';
+import 'package:xs_user/initialization_service.dart';
 import 'package:xs_user/onboarding_screen.dart';
+import 'package:xs_user/order_provider.dart';
 import 'package:xs_user/theme_provider.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
+import 'package:xs_user/canteen_provider.dart';
+import 'package:xs_user/menu_provider.dart';
+
+void main(){
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
-  await GoogleSignIn.instance.initialize(serverClientId: dotenv.env['SERVER_CLIENT_ID']);
-
+  final initializationService = InitializationService();
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => CartProvider()),
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => CanteenProvider()),
+        ChangeNotifierProvider(create: (context) => MenuProvider()),
+        ChangeNotifierProvider(create: (context) => OrderProvider()),
+        ChangeNotifierProvider.value(value: initializationService),
       ],
       child: const MyApp(),
     ),
   );
+   Future.microtask(() => initializationService.initializeSupabaseAndGoogle());
 }
 
 class MyApp extends StatefulWidget {
@@ -40,49 +39,24 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late Future<Widget> _initialScreenFuture;
+  late Future<bool> _hasSeenOnboardingFuture;
 
   @override
   void initState() {
     super.initState();
-    _initialScreenFuture = _getInitialScreen();
+    _hasSeenOnboardingFuture = _checkOnboardingStatus();
   }
 
-  Future<void> _signOut(String reason) async {
-    debugPrint('Forcing sign out because: $reason');
-    await GoogleSignIn.instance.signOut();
-    await Supabase.instance.client.auth.signOut();
-  }
-
-  Future<Widget> _getInitialScreen() async {
+  Future<bool> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final bool hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
-    if (!hasSeenOnboarding) {
-      return const OnboardingScreen();
-    }
-
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session == null) {
-      return const LoginScreen();
-    }
-
-    final bool isSessionValid = await AuthService.isGoogleSessionValid();
-
-    if (isSessionValid) {
-      debugPrint('User session is valid. Proceeding to home screen.');
-      return const HomeScreen();
-    } else {
-      await _signOut('Google session is no longer valid.');
-      return const LoginScreen(snackbarMessage: "Your session has expired or access was revoked. Please sign in again.");
-    }
+    return prefs.getBool('hasSeenOnboarding') ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-
     return MaterialApp(
-      title: 'XS User',
+      title: 'Namma Canteen',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.themeMode,
       theme: ThemeData(
@@ -153,17 +127,18 @@ class _MyAppState extends State<MyApp> {
           }),
         ),
       ),
-      home: FutureBuilder<Widget>(
-        future: _initialScreenFuture,
+      home: FutureBuilder<bool>(
+        future: _hasSeenOnboardingFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            return snapshot.data ?? const LoginScreen();
+            if (snapshot.data == true) {
+              return const HomeScreen();
+            } else {
+              return const OnboardingScreen();
+            }
+          } else {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
         },
       ),
     );
