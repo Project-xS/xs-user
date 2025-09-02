@@ -286,7 +286,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
               if (menuProvider.getMenuItems(widget.canteen.id).isNotEmpty){
                 List<Item> items = _applySortToItems(menuProvider.getMenuItems(widget.canteen.id));
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
@@ -297,7 +297,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                   },
                 );
               }
-              if (menuProvider.isLoading && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
+              if (menuProvider.isLoading(widget.canteen.id) && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -328,7 +328,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   Widget _buildReviewsTab(BuildContext context) {
     return Consumer<MenuProvider>(
       builder: (context, menuProvider, child) {
-        if (menuProvider.isLoading && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
+        if (menuProvider.isLoading(widget.canteen.id) && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 

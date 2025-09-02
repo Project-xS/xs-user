@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:xs_user/api_service.dart';
-import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
 
 class CanteenProvider extends ChangeNotifier {
@@ -27,9 +26,6 @@ class CanteenProvider extends ChangeNotifier {
     try {
       _canteens = await ApiService().getActiveCanteens();
       _lastFetchTime = now;
-      for (var canteen in _canteens) {
-        MenuProvider().fetchMenuItems(canteen.id, force: true);
-      }
     } catch (e) {
       debugPrint('Error fetching canteens: $e');
     } finally {

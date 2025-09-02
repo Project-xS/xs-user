@@ -1,15 +1,26 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
-import 'models.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:xs_user/auth_service.dart';
+import 'package:xs_user/models.dart';
 
 class ApiService {
   static const String baseUrl = 'https://proj-xs.fly.dev';
 
   Future<ApiResponse> createUser(String rfid, String name, String email) async {
+    final headers = {'Content-Type': 'application/json'};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.post(
       Uri.parse('$baseUrl/auth/create'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode(NewUser(rfid: rfid, name: name, email: email).toJson()),
     );
 
@@ -22,9 +33,18 @@ class ApiService {
   }
 
   Future<ApiResponse> loginUser(String email) async {
+    final headers = {'Content-Type': 'application/json'};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode(LoginRequest(email: email).toJson()),
     );
 
@@ -37,9 +57,18 @@ class ApiService {
   }
 
   Future<ApiResponse> createOrder(int userId, List<int> itemIds, String deliverAt) async {
+    final headers = {'Content-Type': 'application/json'};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.post(
       Uri.parse('$baseUrl/orders'),
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode(NewOrder(userId: userId, itemIds: itemIds, deliverAt: deliverAt).toJson()),
     );
 
@@ -52,6 +81,15 @@ class ApiService {
   }
 
   Future<OrderResponse> getActiveOrders({int? userId, String? rfid}) async {
+    final headers = <String, String>{};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final queryParameters = {
       if (userId != null) 'user_id': userId.toString(),
       if (rfid != null) 'rfid': rfid,
@@ -59,7 +97,7 @@ class ApiService {
 
     final uri = Uri.parse('$baseUrl/orders/by_user').replace(queryParameters: queryParameters);
 
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode == 200 || response.statusCode == 500) {
       debugPrint('getActiveOrders response: ${response.body}');
@@ -71,8 +109,18 @@ class ApiService {
   }
 
   Future<OrderData> getOrderById(int id) async {
+    final headers = <String, String>{};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.get(
       Uri.parse('$baseUrl/orders/$id'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
@@ -89,8 +137,18 @@ class ApiService {
   }
 
   Future<List<Item>> getItemsByCanteenId(int canteenId) async {
+    final headers = <String, String>{};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.get(
       Uri.parse('$baseUrl/canteen/$canteenId/items'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
@@ -107,8 +165,18 @@ class ApiService {
   }
 
   Future<User> getUser(int userId) async {
+    final headers = <String, String>{};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.get(
       Uri.parse('$baseUrl/users/$userId'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
@@ -120,8 +188,18 @@ class ApiService {
   }
 
   Future<List<Canteen>> getActiveCanteens() async {
+    final headers = <String, String>{};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.get(
       Uri.parse('$baseUrl/canteen'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {
@@ -134,8 +212,18 @@ class ApiService {
   }
 
   Future<List<Item>> searchItems(String query) async {
+    final headers = <String, String>{};
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (isSessionValid) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        headers['Authorization'] = 'Bearer ${session.accessToken}';
+      }
+    }
+
     final response = await http.get(
       Uri.parse('$baseUrl/search/$query'),
+      headers: headers,
     );
 
     if (response.statusCode == 200) {

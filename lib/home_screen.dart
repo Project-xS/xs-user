@@ -19,6 +19,9 @@ import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/profile_screen.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:xs_user/canteen_provider.dart';
+import 'package:xs_user/user_preferences.dart';
+import 'package:xs_user/order_provider.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -65,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_initializationService.status == InitializationStatus.initialized) {
+      _fetchInitialData();
       final session = Supabase.instance.client.auth.currentSession;
       if (session == null) return;
 
@@ -72,6 +76,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!isSessionValid && mounted) {
         _showReLoginDialog();
       }
+    }
+  }
+
+  Future<void> _fetchInitialData() async {
+    final userId = await UserPreferences.getUserId();
+    if (userId != null) {
+      Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(userId);
     }
   }
 
@@ -175,13 +186,14 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   SortOption _currentSortOption = SortOption.name;
+  late final CanteenProvider _canteenProvider;
 
   @override
   void initState() {
     super.initState();
-    final canteenProvider = Provider.of<CanteenProvider>(context, listen: false);
-    canteenProvider.fetchCanteens();
-    canteenProvider.addListener(_onCanteensLoaded);
+    _canteenProvider = Provider.of<CanteenProvider>(context, listen: false);
+    _canteenProvider.fetchCanteens();
+    _canteenProvider.addListener(_onCanteensLoaded);
 
     _searchController.addListener(() {
       if (_debounce?.isActive ?? false) _debounce?.cancel();
@@ -201,18 +213,17 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
 
   @override
   void dispose() {
-    Provider.of<CanteenProvider>(context, listen: false).removeListener(_onCanteensLoaded);
+    _canteenProvider.removeListener(_onCanteensLoaded);
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
 
   void _onCanteensLoaded() {
-    final canteenProvider = Provider.of<CanteenProvider>(context, listen: false);
-    if (!canteenProvider.isLoading && canteenProvider.canteens.isNotEmpty) {
+    if (!_canteenProvider.isLoading && _canteenProvider.canteens.isNotEmpty) {
       final menuProvider = Provider.of<MenuProvider>(context, listen: false);
-      for (var canteen in canteenProvider.canteens) {
-        menuProvider.fetchMenuItems(canteen.id);
+      for (var canteen in _canteenProvider.canteens) {
+        menuProvider.fetchMenuItems(canteen.id, force: true);
       }
     }
   }
@@ -355,7 +366,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 80,
+          expandedHeight: 75,
           backgroundColor: Colors.transparent,
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
@@ -363,7 +374,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 color: Theme.of(context).appBarTheme.backgroundColor,
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 48, 16, 5),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 5),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -378,6 +389,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                     const SizedBox(height: 4),
                     Text(
                       _getRandomPhrase(),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                       style: GoogleFonts.montserrat(
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                         fontSize: 13,
@@ -432,7 +445,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search for food...',
+                hintText: 'Search for food...', 
                 hintStyle: GoogleFonts.montserrat(
                   color: Theme.of(context).textTheme.bodyMedium?.color,
                   fontSize: 14,
@@ -447,7 +460,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                   children: [
                     if (_searchController.text.isNotEmpty)
                       IconButton(
-                        icon: Icon(Icons.clear,
+                        icon: Icon(Icons.clear, 
                             color: Theme.of(context).iconTheme.color),
                         onPressed: () {
                           _searchController.clear();
@@ -771,7 +784,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                             padding: EdgeInsets.zero,
                             elevation: 4,
                           ),
-                          child: Icon(Icons.add,
+                          child: Icon(Icons.add, 
                               color: Theme.of(context).colorScheme.onPrimary),
                         ),
                       )
@@ -781,7 +794,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                             onPressed: () {
                               cart.removeSingleItem(item.id.toString());
                             },
-                            icon: Icon(Icons.remove_circle_outline,
+                            icon: Icon(Icons.remove_circle_outline, 
                                 color: Theme.of(context).iconTheme.color),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
@@ -811,7 +824,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                                   item.isVeg,
                                   item.stock);
                             },
-                            icon: Icon(Icons.add_circle_outline,
+                            icon: Icon(Icons.add_circle_outline, 
                                 color: Theme.of(context).colorScheme.primary),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),

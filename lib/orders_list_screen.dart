@@ -144,11 +144,20 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
-                      child: (orderData.items[index].pic != null)? CircleAvatar(
-                        child: ExtendedImage.network(orderData.items[index].pic!, fit: BoxFit.cover, cache: true, cacheKey: orderData.items[index].etag))
-                            : CircleAvatar(
-                                child: Text(orderData.items[index].name.substring(0, 1)),
-                      ),
+                      child: (orderData.items[index].pic != null)
+                          ? CircleAvatar(
+                              child: ClipOval(
+                                child: ExtendedImage.network(
+                                  orderData.items[index].pic!,
+                                  fit: BoxFit.contain,
+                                  cache: true,
+                                  cacheKey: orderData.items[index].etag!,
+                                ),
+                              ),
+                            )
+                          : CircleAvatar(
+                              child: Text(orderData.items[index].name.substring(0, 1)),
+                            ),
                     );
                   },
                 ),

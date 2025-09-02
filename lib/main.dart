@@ -8,7 +8,7 @@ import 'package:xs_user/initialization_service.dart';
 import 'package:xs_user/onboarding_screen.dart';
 import 'package:xs_user/order_provider.dart';
 import 'package:xs_user/theme_provider.dart';
-
+// import 'package:xs_user/user_preferences.dart';
 import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/menu_provider.dart';
 

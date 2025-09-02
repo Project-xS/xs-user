@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       await supabase.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: Platform.isWindows
-            ? 'http://localhost:49152'
+            ? '`http://localhost:49152'
             : 'com.nammacanteen.user://login-callback',
         queryParams: {
           'hd': 'citchennai.net',

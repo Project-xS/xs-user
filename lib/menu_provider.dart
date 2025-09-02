@@ -5,13 +5,13 @@ import 'package:xs_user/models.dart';
 class MenuProvider extends ChangeNotifier {
   final Map<int, List<Item>> _menuItems = {};
   final Map<int, DateTime> _lastFetchTimes = {};
-  bool _isLoading = false;
+  final Set<int> _loadingCanteens = {};
 
   List<Item> getMenuItems(int canteenId) => _menuItems[canteenId] ?? [];
-  bool get isLoading => _isLoading;
+  bool isLoading(int canteenId) => _loadingCanteens.contains(canteenId);
 
   Future<void> fetchMenuItems(int canteenId, {bool force = false}) async {
-    if (_isLoading) return;
+    if (_loadingCanteens.contains(canteenId)) return;
 
     final now = DateTime.now();
     final lastFetchTime = _lastFetchTimes[canteenId];
@@ -22,7 +22,7 @@ class MenuProvider extends ChangeNotifier {
       return;
     }
 
-    _isLoading = true;
+    _loadingCanteens.add(canteenId);
     Future.microtask(() => notifyListeners());
 
     try {
@@ -31,7 +31,7 @@ class MenuProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error fetching menu items for canteen $canteenId: $e');
     } finally {
-      _isLoading = false;
+      _loadingCanteens.remove(canteenId);
       notifyListeners();
     }
   }

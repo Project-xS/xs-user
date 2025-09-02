@@ -15,7 +15,8 @@ class ApiResponse {
 }
 
 class OrderItem {
-  final String canteenName;
+  final int canteenId;
+  final String? canteenName;
   final String name;
   final int quantity;
   final bool isVeg;
@@ -24,7 +25,8 @@ class OrderItem {
   final String? description;
 
   OrderItem({
-    required this.canteenName,
+    required this.canteenId,
+    this.canteenName,
     required this.name,
     required this.quantity,
     required this.isVeg,
@@ -35,12 +37,12 @@ class OrderItem {
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
-      canteenName: json['canteen_name'],
+      canteenId: json['canteen_id'],
       name: json['name'],
       quantity: json['quantity'],
       isVeg: json['is_veg'],
       pic: json['pic_link'],
-      etag: json['pic_etag'],
+      etag: json['pic_etag']?.replaceAll(RegExp(r'["\\]'), ''),
       description: json['description'],
     );
   }
@@ -155,7 +157,7 @@ class Canteen {
       name: json['canteen_name'],
       location: json['location'],
       pic: json['pic_link'],
-      etag: json['pic_etag'],
+      etag: json['pic_etag']?.replaceAll(RegExp(r'["\\]'), ''),
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
     );
   }
@@ -193,7 +195,7 @@ class Item {
       description: json['description'],
       price: (json['price'] as num).toDouble(),
       pic: json['pic_link'],
-      etag: json['pic_etag'],
+      etag: json['pic_etag']?.replaceAll(RegExp(r'["\\]'), ''),
       canteenId: json['canteen_id'],
       isVeg: json['is_veg'],
       isAvailable: json['is_available'] || json['stock'] == -1,
