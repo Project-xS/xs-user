@@ -1,7 +1,6 @@
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
@@ -10,6 +9,8 @@ import 'package:xs_user/models.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/theme_provider.dart';
 import 'package:xs_user/help_and_support_screen.dart';
+import 'package:xs_user/auth_service.dart';
+import 'package:xs_user/user_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -169,12 +170,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.logout,
                   text: 'Logout',
                   onTap: () async {
-                    await GoogleSignIn.instance.signOut();
+                    await AuthService.signOutGoogle();
                     await Supabase.instance.client.auth.signOut();
+                    await UserPreferences.clearUserId(); // Clear the user ID
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('userEmail');
-                    await prefs.remove('userId');
-                    await prefs.setBool('hasSeenOnboarding', true);
+                    await prefs.remove('hasSeenOnboarding');
                     if (context.mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,

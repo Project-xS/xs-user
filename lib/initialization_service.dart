@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -23,9 +23,27 @@ class InitializationService extends ChangeNotifier {
 
     try {
       await dotenv.load(fileName: ".env");
+      final supabaseUrl = dotenv.env['SUPABASE_URL'];
+      final publishableKey = dotenv.env['SUPABASE_PUBLISHABLE_KEY'] ?? dotenv.env['SUPABASE_ANON_KEY'];
+
+      if (supabaseUrl == null || publishableKey == null) {
+        throw Exception('Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY in .env');
+      }
+
       await Supabase.initialize(
-        url: dotenv.env['SUPABASE_URL']!,
-        anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+        url: supabaseUrl,
+        // Supabase Flutter still names this parameter `anonKey`. Provide your
+        // new Publishable Key here.
+        anonKey: publishableKey,
+      );
+
+      final serverClientId = dotenv.env['SERVER_CLIENT_ID'];
+      if (serverClientId == null || serverClientId.isEmpty) {
+        throw Exception('Missing SERVER_CLIENT_ID in .env (Google Web Client ID)');
+      }
+      await GoogleSignIn.instance.initialize(
+        serverClientId: serverClientId,
+        hostedDomain: 'citchennai.net',
       );
       // await GoogleSignIn.instance.initialize(
       //   serverClientId: dotenv.env['SERVER_CLIENT_ID'],

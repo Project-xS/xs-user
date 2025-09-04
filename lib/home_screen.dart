@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xs_user/api_service.dart';
@@ -21,6 +20,7 @@ import 'package:badges/badges.dart' as badges;
 import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/user_preferences.dart';
 import 'package:xs_user/order_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -80,9 +80,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchInitialData() async {
-    final userId = await UserPreferences.getUserId();
-    if (userId != null) {
-      Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(userId);
+    final userIdString = await UserPreferences.getUserId();
+    if (userIdString != null) {
+      final userId = int.tryParse(userIdString);
+      if (userId != null) {
+        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(userId);
+      }
     }
   }
 
@@ -96,8 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _signOut() async {
-    await GoogleSignIn.instance.signOut();
+    await AuthService.signOutGoogle();
     await Supabase.instance.client.auth.signOut();
+    await UserPreferences.clearUserId();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userEmail');
+    await prefs.remove('hasSeenOnboarding');
   }
 
   void _showReLoginDialog() {
@@ -374,7 +381,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 color: Theme.of(context).appBarTheme.backgroundColor,
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 5),
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 5),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xs_user/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math' as math;
+import 'package:xs_user/auth_service.dart';
+import 'package:xs_user/user_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? snackbarMessage;
@@ -48,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('hasSeenOnboarding', true);
           await prefs.setString('userEmail', user.email ?? '');
-          await prefs.setString('userId', user.id);
+          await UserPreferences.setUserId(user.id);
 
           if (mounted) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -72,16 +73,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      await supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: Platform.isWindows
-            ? '`http://localhost:49152'
-            : 'com.nammacanteen.user://login-callback',
-        queryParams: {
-          'hd': 'citchennai.net',
-          'scope': 'email profile',
-        },
-      );
+      await AuthService.signInWithGoogle();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
