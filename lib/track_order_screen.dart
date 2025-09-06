@@ -3,23 +3,31 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/home_screen.dart';
 import 'package:xs_user/models.dart';
+import 'package:xs_user/orders_list_screen.dart';
 
 class TrackOrderScreen extends StatefulWidget {
-  final int orderId;
+  final Order? order;
+  final int? orderId;
+  final String? orderedAt;
 
-  const TrackOrderScreen({super.key, required this.orderId});
+  const TrackOrderScreen({super.key, this.order, this.orderId, this.orderedAt})
+      : assert(order != null || orderId != null, 'Either order or orderId must be provided');
 
   @override
   State<TrackOrderScreen> createState() => _TrackOrderScreenState();
 }
 
 class _TrackOrderScreenState extends State<TrackOrderScreen> {
-  late Future<OrderData> _orderFuture;
-
+  late Future<Order> _orderFuture;
+  
   @override
   void initState() {
     super.initState();
-    _orderFuture = ApiService().getOrderById(widget.orderId);
+    if (widget.order != null) {
+      _orderFuture = Future.value(widget.order!);
+    } else if (widget.orderId != null) {
+      _orderFuture = ApiService().getOrderById(widget.orderId!);
+    }
   }
 
   @override
@@ -33,7 +41,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
+            builder: (context) => const OrdersListScreen(),
           ),
           (Route<dynamic> route) => false,
         );
@@ -64,7 +72,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
             ),
           ),
         ),
-        body: FutureBuilder<OrderData>(
+        body: FutureBuilder<Order>(
           future: _orderFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -88,7 +96,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Estimated Arrival: ${orderData.deliverAt}',
+                      'Ordered At: ${widget.orderedAt}',
                       style: GoogleFonts.montserrat(
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                         fontSize: 14,
@@ -140,7 +148,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                           ),
                         ),
                         Text(
-                          '₹${orderData.totalPrice.toStringAsFixed(2)}',
+                          '₹${orderData.totalPrice.toString()}',
                           style: GoogleFonts.montserrat(
                             color: Theme.of(context).textTheme.titleLarge?.color,
                             fontSize: 16,
@@ -151,11 +159,8 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                     ),
                     const SizedBox(height: 40),
                     _buildStatusStep(context, title: 'Order Placed', isCompleted: true),
-                    if (orderData.deliverAt == 'Instant')
-                      _buildStatusStep(context, title: 'Ready to collect', isCompleted: true, isActive: true)
-                    else
-                      _buildStatusStep(context, title: 'Yet to be delivered', isCompleted: true, isActive: true),
-                    _buildStatusStep(context, title: 'Delivered', isCompleted: false),
+                    _buildStatusStep(context, title: 'Preparing', isCompleted: orderData.orderStatus, isActive: !orderData.orderStatus),
+                    _buildStatusStep(context, title: 'Delivered', isCompleted: orderData.orderStatus, isActive: orderData.orderStatus),
                   ],
                 ),
               );

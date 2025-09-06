@@ -8,7 +8,7 @@ import 'package:xs_user/models.dart';
 class ApiService {
   static const String baseUrl = 'https://proj-xs.fly.dev';
 
-  Future<ApiResponse> createUser(String rfid, String name, String email) async {
+  Future<StatusResponse> createUser(String rfid, String name, String email) async {
     final headers = {'Content-Type': 'application/json'};
     final isSessionValid = await AuthService.isGoogleSessionValid();
     if (isSessionValid) {
@@ -25,14 +25,14 @@ class ApiService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 409) {
-      return ApiResponse.fromJson(jsonDecode(response.body));
+      return StatusResponse.fromJson(jsonDecode(response.body));
     } else {
       final errorResponse = jsonDecode(response.body);
       throw Exception('Failed to create user: ${errorResponse['message']}');
     }
   }
 
-  Future<ApiResponse> loginUser(String email) async {
+  Future<StatusResponse> loginUser(String email) async {
     final headers = {'Content-Type': 'application/json'};
     final isSessionValid = await AuthService.isGoogleSessionValid();
     if (isSessionValid) {
@@ -49,14 +49,14 @@ class ApiService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 400) {
-      return ApiResponse.fromJson(jsonDecode(response.body));
+      return StatusResponse.fromJson(jsonDecode(response.body));
     } else {
       final errorResponse = jsonDecode(response.body);
       throw Exception('Failed to login user: ${errorResponse['message']}');
     }
   }
 
-  Future<ApiResponse> createOrder(int userId, List<int> itemIds, String deliverAt) async {
+  Future<StatusResponse> createOrder(int userId, List<int> itemIds, String deliverAt) async {
     final headers = {'Content-Type': 'application/json'};
     final isSessionValid = await AuthService.isGoogleSessionValid();
     if (isSessionValid) {
@@ -73,14 +73,14 @@ class ApiService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 409) {
-      return ApiResponse.fromJson(jsonDecode(response.body));
+      return StatusResponse.fromJson(jsonDecode(response.body));
     } else {
       final errorResponse = jsonDecode(response.body);
       throw Exception('Failed to create order: ${errorResponse['message']}');
     }
   }
 
-  Future<OrderResponse> getActiveOrders({int? userId, String? rfid}) async {
+  Future<OrderResponse> getActiveOrders(int userId) async {
     final headers = <String, String>{};
     final isSessionValid = await AuthService.isGoogleSessionValid();
     if (isSessionValid) {
@@ -90,12 +90,7 @@ class ApiService {
       }
     }
 
-    final queryParameters = {
-      if (userId != null) 'user_id': userId.toString(),
-      if (rfid != null) 'rfid': rfid,
-    };
-
-    final uri = Uri.parse('$baseUrl/orders/by_user').replace(queryParameters: queryParameters);
+    final uri = Uri.parse('$baseUrl/users/get_past_orders/$userId');
 
     final response = await http.get(uri, headers: headers);
 
@@ -108,7 +103,7 @@ class ApiService {
     }
   }
 
-  Future<OrderData> getOrderById(int id) async {
+  Future<Order> getOrderById(int id) async {
     final headers = <String, String>{};
     final isSessionValid = await AuthService.isGoogleSessionValid();
     if (isSessionValid) {
@@ -125,8 +120,8 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final orderResponse = OrderResponse.fromJson(jsonDecode(response.body));
-      if (orderResponse.data != null && orderResponse.data!.isNotEmpty) {
-        return orderResponse.data!.first;
+      if (orderResponse.data.isNotEmpty) {
+        return orderResponse.data.first;
       } else {
         throw Exception('No order data found for id: $id');
       }

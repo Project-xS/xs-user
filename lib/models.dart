@@ -1,97 +1,106 @@
-class ApiResponse {
+class StatusResponse {
   final String status;
   final String? error;
-  final dynamic data;
 
-  ApiResponse({required this.status, this.error, this.data});
+  StatusResponse({required this.status, this.error});
 
-  factory ApiResponse.fromJson(Map<String, dynamic> json) {
-    return ApiResponse(
+  factory StatusResponse.fromJson(Map<String, dynamic> json) {
+    return StatusResponse(
       status: json['status'],
       error: json['error'],
-      data: json['data'],
     );
   }
 }
 
 class OrderItem {
   final int canteenId;
-  final String? canteenName;
-  final String name;
-  final int quantity;
+  final String description;
   final bool isVeg;
-  final String? pic;
-  final String? etag;
-  final String? description;
+  final int itemId;
+  final String name;
+  final String? picEtag;
+  final String? picLink;
+  final int quantity;
 
   OrderItem({
     required this.canteenId,
-    this.canteenName,
-    required this.name,
-    required this.quantity,
+    required this.description,
     required this.isVeg,
-    required this.pic,
-    required this.etag,
-    this.description,
+    required this.itemId,
+    required this.name,
+    this.picEtag,
+    this.picLink,
+    required this.quantity,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
       canteenId: json['canteen_id'],
-      name: json['name'],
-      quantity: json['quantity'],
-      isVeg: json['is_veg'],
-      pic: json['pic_link'],
-      etag: json['pic_etag']?.replaceAll(RegExp(r'["\\]'), ''),
       description: json['description'],
+      isVeg: json['is_veg'],
+      itemId: json['item_id'],
+      name: json['name'],
+      picEtag: json['pic_etag'],
+      picLink: json['pic_link'],
+      quantity: json['quantity'],
     );
   }
 }
 
-class OrderData {
+class Order {
   final int orderId;
+  final bool orderStatus;
+  final int orderedAt;
   final int totalPrice;
-  final String deliverAt;
   final List<OrderItem> items;
 
-  OrderData({
+  Order({
     required this.orderId,
+    required this.orderStatus,
+    required this.orderedAt,
     required this.totalPrice,
-    required this.deliverAt,
     required this.items,
   });
 
-  factory OrderData.fromJson(Map<String, dynamic> json) {
-    return OrderData(
+  factory Order.fromJson(Map<String, dynamic> json) {
+    var itemsList = json['items'] as List;
+    List<OrderItem> items = itemsList.map((i) => OrderItem.fromJson(i)).toList();
+
+    return Order(
       orderId: json['order_id'],
+      orderStatus: json['order_status'] ?? false,
+      orderedAt: json['ordered_at'],
       totalPrice: json['total_price'],
-      deliverAt: json['deliver_at'].toString(),
-      items: (json['items'] as List).map((item) => OrderItem.fromJson(item)).toList(),
+      items: items,
     );
   }
 }
 
 class OrderResponse {
-  final String status;
+  final List<Order> data;
   final String? error;
-  final List<OrderData>? data;
+  final String status;
 
-  OrderResponse({required this.status, this.error, this.data});
+  OrderResponse({
+    required this.data,
+    this.error,
+    required this.status,
+  });
 
   factory OrderResponse.fromJson(Map<String, dynamic> json) {
-    dynamic dataJson = json['data'];
-    List<OrderData>? parsedData;
-
-    if (dataJson is List) {
-      parsedData = dataJson.map((item) => OrderData.fromJson(item)).toList();
-    } else if (dataJson is Map<String, dynamic>) {
-      parsedData = [OrderData.fromJson(dataJson)];
+    List<Order> orders = [];
+    if (json['data'] is List) {
+      var dataList = json['data'] as List;
+      orders = dataList.map((i) => Order.fromJson(i)).toList();
+    } else if (json['data'] is Map<String, dynamic>) {
+      orders = [Order.fromJson(json['data'])];
     }
+    orders.sort((a,b) => b.orderId.compareTo(a.orderId));
 
     return OrderResponse(
-      status: json['status'],
+      data: orders,
       error: json['error'],
-      data: parsedData,
+      status: json['status'],
     );
   }
 }

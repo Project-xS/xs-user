@@ -23,7 +23,7 @@ class OrderProvider extends ChangeNotifier {
     Future.microtask(() => notifyListeners());
 
     try {
-      _orderResponse = await ApiService().getActiveOrders(userId: userId);
+      _orderResponse = await ApiService().getActiveOrders(userId);
     } catch (e) {
       _error = e.toString();
       debugPrint('Error fetching orders: $e');

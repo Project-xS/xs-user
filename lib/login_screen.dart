@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : ElevatedButton.icon(
-                          icon: const Icon(Icons.login, color: Colors.white),
+                          icon: Image.asset('assets/Google.png', fit: BoxFit.cover, height: 30, width: 30),
                           label: Text(
                             'Sign in with Google',
                             style: GoogleFonts.montserrat(
@@ -132,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFF7A3A),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 40, vertical: 16),
+                                horizontal: 30, vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),

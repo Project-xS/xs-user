@@ -10,6 +10,7 @@ import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/theme_provider.dart';
 import 'package:xs_user/help_and_support_screen.dart';
 import 'package:xs_user/auth_service.dart';
+import 'package:xs_user/user_analytics_screen.dart';
 import 'package:xs_user/user_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -90,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 24),
                 CircleAvatar(
                   radius: 48,
-                  backgroundImage: ExtendedImage.network(user.profilePictureUrl!, cacheKey: cacheKey, cache: true).image,
+                  backgroundImage: (user.profilePictureUrl != null)?ExtendedImage.network(user.profilePictureUrl!, cacheKey: cacheKey, cache: true).image:null,
                   child: user.profilePictureUrl == null
                       ? Icon(Icons.person, size: 48, color: Theme.of(context).iconTheme.color)
                       : null,
@@ -148,6 +149,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const OrdersListScreen(showBackButton: true),
+                      ),
+                    );
+                  },
+                ),
+                _buildProfileMenuItem(
+                  context,
+                  icon: Icons.analytics_outlined,
+                  text: 'My Analytics',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserAnalyticsScreen(),
                       ),
                     );
                   },

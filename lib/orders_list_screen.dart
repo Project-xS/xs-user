@@ -6,6 +6,7 @@ import 'package:xs_user/models.dart';
 import 'package:xs_user/track_order_screen.dart';
 import 'package:xs_user/order_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:xs_user/user_preferences.dart';
 
 class OrdersListScreen extends StatefulWidget {
   final bool showBackButton;
@@ -20,8 +21,20 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   @override
   void initState() {
     super.initState();
-    // TODO: Get userId from shared preferences else rfid
-    Provider.of<OrderProvider>(context, listen: false).fetchOrders(1);
+    _fetchOrders();
+  }
+
+  Future<void> _fetchOrders() async {
+    final userIdString = await UserPreferences.getUserId();
+    if (userIdString != null) {
+      final userId = int.tryParse(userIdString);
+      if (userId != null) {
+        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(userId);
+      }
+      else{
+        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(1);
+      }
+    }
   }
 
   @override
@@ -78,11 +91,11 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               return Center(child: Text('Error: ${orderProvider.error}'));
             }
 
-            if (orderProvider.orderResponse == null || orderProvider.orderResponse!.data == null || orderProvider.orderResponse!.data!.isEmpty) {
+            if (orderProvider.orderResponse == null || orderProvider.orderResponse!.data.isEmpty) {
               return const Center(child: Text('No orders found.'));
             }
 
-            final List<OrderData> orders = orderProvider.orderResponse!.data!;
+            final List<Order> orders = orderProvider.orderResponse!.data;
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: orders.length,
@@ -96,13 +109,21 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, {required OrderData orderData}) {
+  Widget _buildOrderCard(BuildContext context, {required Order orderData}) {
+    final date = DateTime.fromMillisecondsSinceEpoch(orderData.orderedAt * 1000);
+    final formattedDate = "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+    var hour = date.hour;
+    final ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    hour = hour == 0 ? 12 : hour;
+    final formattedTime = "${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $ampm";
+    final formattedDateTime = "$formattedDate - $formattedTime";
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TrackOrderScreen(orderId: orderData.orderId),
+            builder: (context) => TrackOrderScreen(orderId: orderData.orderId, order: orderData, orderedAt: formattedDateTime),
           ),
         );
       },
@@ -127,10 +148,11 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                     ),
                   ),
                   Text(
-                    orderData.deliverAt,
+                    formattedDateTime,
                     style: GoogleFonts.montserrat(
                       color: Theme.of(context).textTheme.bodyMedium?.color,
-                      fontSize: 12,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -144,14 +166,14 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
-                      child: (orderData.items[index].pic != null)
+                      child: (orderData.items[index].picLink != null)
                           ? CircleAvatar(
                               child: ClipOval(
                                 child: ExtendedImage.network(
-                                  orderData.items[index].pic!,
+                                  orderData.items[index].picLink!,
                                   fit: BoxFit.contain,
                                   cache: true,
-                                  cacheKey: orderData.items[index].etag!,
+                                  cacheKey: orderData.items[index].picEtag ?? orderData.items[index].picLink,
                                 ),
                               ),
                             )
@@ -169,11 +191,11 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.orange,
+                      color: orderData.orderStatus ? Colors.green : Colors.orange,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      orderData.deliverAt == 'Instant' ? 'Ready to collect' : 'Yet to be delivered',
+                      orderData.orderStatus ? 'Completed' : 'Pending',
                       style: GoogleFonts.montserrat(
                         color: Colors.white,
                         fontSize: 12,
@@ -182,7 +204,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                     ),
                   ),
                   Text(
-                    '₹${orderData.totalPrice.toStringAsFixed(2)}',
+                    '₹${orderData.totalPrice.toString()}',
                     style: GoogleFonts.montserrat(
                       color: Theme.of(context).textTheme.titleLarge?.color,
                       fontSize: 16,

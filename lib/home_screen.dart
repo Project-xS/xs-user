@@ -86,6 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (userId != null) {
         Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(userId);
       }
+      else{
+        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(1);
+      }
     }
   }
 
