@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -13,7 +12,10 @@ class HelpAndSupportScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).iconTheme.color,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -39,7 +41,11 @@ class HelpAndSupportScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFaqCard(BuildContext context, {required String question, required String answer}) {
+  Widget _buildFaqCard(
+    BuildContext context, {
+    required String question,
+    required String answer,
+  }) {
     return Card(
       color: Theme.of(context).cardColor,
       margin: const EdgeInsets.only(bottom: 16.0),

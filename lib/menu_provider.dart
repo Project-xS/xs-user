@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:xs_user/api_service.dart';
+import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/models.dart';
 
 class MenuProvider extends ChangeNotifier {
@@ -18,7 +19,8 @@ class MenuProvider extends ChangeNotifier {
 
     if (!force &&
         lastFetchTime != null &&
-        now.difference(lastFetchTime) < const Duration(minutes: 1, seconds: 30)) {
+        now.difference(lastFetchTime) <
+            const Duration(minutes: 1, seconds: 30)) {
       return;
     }
 
@@ -28,6 +30,8 @@ class MenuProvider extends ChangeNotifier {
     try {
       _menuItems[canteenId] = await ApiService().getItemsByCanteenId(canteenId);
       _lastFetchTimes[canteenId] = now;
+    } on AuthException {
+      rethrow;
     } catch (e) {
       debugPrint('Error fetching menu items for canteen $canteenId: $e');
     } finally {

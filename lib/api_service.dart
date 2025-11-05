@@ -1,235 +1,327 @@
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/models.dart';
+import 'dart:developer';
+
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+
+  ApiException(this.statusCode, this.message);
+
+  @override
+  String toString() => 'ApiException($statusCode): $message';
+}
 
 class ApiService {
-  static const String baseUrl = 'https://proj-xs.fly.dev';
+  ApiService({http.Client? client}) : _client = client ?? http.Client();
 
-  Future<StatusResponse> createUser(String rfid, String name, String email) async {
-    final headers = {'Content-Type': 'application/json'};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
+  static String get baseUrl =>
+      dotenv.env['API_BASE_URL'] ?? 'https://proj-xs.fly.dev';
+  static const _allowedDeliveryBands = {
+    '11:00am - 12:00pm',
+    '12:00pm - 01:00pm',
+  };
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/create'),
-      headers: headers,
-      body: jsonEncode(NewUser(rfid: rfid, name: name, email: email).toJson()),
+  final http.Client _client;
+
+  Future<StatusResponse> createUser(
+    String rfid,
+    String name,
+    String email,
+  ) async {
+    final response = await _post(
+      path: '/auth/create',
+      body: NewUser(rfid: rfid, name: name, email: email).toJson(),
     );
 
     if (response.statusCode == 200 || response.statusCode == 409) {
-      return StatusResponse.fromJson(jsonDecode(response.body));
-    } else {
-      final errorResponse = jsonDecode(response.body);
-      throw Exception('Failed to create user: ${errorResponse['message']}');
+      return StatusResponse.fromJson(_decodeJson(response.body));
     }
+
+    throw ApiException(response.statusCode, _extractError(response));
   }
 
   Future<StatusResponse> loginUser(String email) async {
-    final headers = {'Content-Type': 'application/json'};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: headers,
-      body: jsonEncode(LoginRequest(email: email).toJson()),
+    final response = await _post(
+      path: '/auth/login',
+      body: LoginRequest(email: email).toJson(),
     );
 
     if (response.statusCode == 200 || response.statusCode == 400) {
-      return StatusResponse.fromJson(jsonDecode(response.body));
-    } else {
-      final errorResponse = jsonDecode(response.body);
-      throw Exception('Failed to login user: ${errorResponse['message']}');
+      return StatusResponse.fromJson(_decodeJson(response.body));
     }
+
+    throw ApiException(response.statusCode, _extractError(response));
   }
 
-  Future<StatusResponse> createOrder(int userId, List<int> itemIds, String deliverAt) async {
-    final headers = {'Content-Type': 'application/json'};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
+  Future<StatusResponse> createOrder(
+    List<int> itemIds,
+    String? deliverAt,
+  ) async {
+    final normalizedDeliverAt = _allowedDeliveryBands.contains(deliverAt)
+        ? deliverAt
+        : null;
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/orders'),
-      headers: headers,
-      body: jsonEncode(NewOrder(userId: userId, itemIds: itemIds, deliverAt: deliverAt).toJson()),
+    final response = await _post(
+      path: '/orders',
+      body: NewOrder(itemIds: itemIds, deliverAt: normalizedDeliverAt).toJson(),
     );
 
     if (response.statusCode == 200 || response.statusCode == 409) {
-      return StatusResponse.fromJson(jsonDecode(response.body));
-    } else {
-      final errorResponse = jsonDecode(response.body);
-      throw Exception('Failed to create order: ${errorResponse['message']}');
+      return StatusResponse.fromJson(_decodeJson(response.body));
     }
+
+    throw ApiException(response.statusCode, _extractError(response));
   }
 
-  Future<OrderResponse> getActiveOrders(int userId) async {
-    final headers = <String, String>{};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
-
-    final uri = Uri.parse('$baseUrl/users/get_past_orders/$userId');
-
-    final response = await http.get(uri, headers: headers);
+  Future<OrderResponse> getOrdersForCurrentUser() async {
+    final response = await _get(path: '/orders/by_user');
 
     if (response.statusCode == 200 || response.statusCode == 500) {
-      debugPrint('getActiveOrders response: ${response.body}');
-      return OrderResponse.fromJson(jsonDecode(response.body));
-    } else {
-      final errorResponse = jsonDecode(response.body);
-      throw Exception('Failed to get active orders: ${errorResponse['message']}');
+      return OrderResponse.fromJson(_decodeJson(response.body));
     }
+
+    throw ApiException(response.statusCode, _extractError(response));
+  }
+
+  Future<OrderResponse> getPastOrders() async {
+    final response = await _get(path: '/users/get_past_orders/0');
+
+    if (response.statusCode == 200 || response.statusCode == 500) {
+      return OrderResponse.fromJson(_decodeJson(response.body));
+    }
+
+    throw ApiException(response.statusCode, _extractError(response));
   }
 
   Future<Order> getOrderById(int id) async {
-    final headers = <String, String>{};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/orders/$id'),
-      headers: headers,
-    );
+    final response = await _get(path: '/orders/$id');
 
     if (response.statusCode == 200) {
-      final orderResponse = OrderResponse.fromJson(jsonDecode(response.body));
+      final orderResponse = OrderResponse.fromJson(_decodeJson(response.body));
       if (orderResponse.data.isNotEmpty) {
         return orderResponse.data.first;
-      } else {
-        throw Exception('No order data found for id: $id');
       }
-    } else {
-      final errorResponse = jsonDecode(response.body);
-      throw Exception('Failed to get order by id: ${errorResponse['message']}');
+      throw ApiException(404, 'No order data found for id: $id');
     }
+
+    throw ApiException(response.statusCode, _extractError(response));
   }
 
   Future<List<Item>> getItemsByCanteenId(int canteenId) async {
-    final headers = <String, String>{};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/canteen/$canteenId/items'),
-      headers: headers,
-    );
+    final response = await _get(path: '/canteen/$canteenId/items');
 
     if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      debugPrint('getItems response: $responseData');
-      if (responseData['data'] != null) {
-        final List<dynamic> itemsJson = responseData['data'];
-        return itemsJson.map((json) => Item.fromJson(json)).toList();
-      }
-      return [];
-    } else {
-      throw Exception('Failed to get items for canteen');
-    }
-  }
-
-  Future<User> getUser(int userId) async {
-    final headers = <String, String>{};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
+      final responseData = _decodeJson(response.body);
+      final List<dynamic>? itemsJson = responseData['data'] as List<dynamic>?;
+      if (itemsJson == null) return const [];
+      return itemsJson.map((json) => Item.fromJson(json)).toList();
     }
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/users/$userId'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return User.fromJson(jsonDecode(response.body));
-    } else {
-      final errorResponse = jsonDecode(response.body);
-      throw Exception('Failed to get user: ${errorResponse['message']}');
-    }
+    throw ApiException(response.statusCode, _extractError(response));
   }
 
   Future<List<Canteen>> getActiveCanteens() async {
-    final headers = <String, String>{};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/canteen'),
-      headers: headers,
-    );
+    final response = await _get(path: '/canteen');
 
     if (response.statusCode == 200) {
-      final List<dynamic> canteensJson = jsonDecode(response.body)['data'];
-      return canteensJson.map((json) => Canteen.fromJson(json)).toList();
-    } else {
-      final errorResponse = jsonDecode(response.body);
-      throw Exception('Failed to get active canteens: ${errorResponse['message']}');
+      final data = _decodeJson(response.body)['data'] as List<dynamic>;
+      return data.map((json) => Canteen.fromJson(json)).toList();
     }
+
+    throw ApiException(response.statusCode, _extractError(response));
   }
 
   Future<List<Item>> searchItems(String query) async {
-    final headers = <String, String>{};
-    final isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid) {
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        headers['Authorization'] = 'Bearer ${session.accessToken}';
-      }
-    }
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/search/$query'),
-      headers: headers,
-    );
+    final encodedQuery = Uri.encodeComponent(query);
+    final response = await _get(path: '/search/$encodedQuery');
 
     if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      if (responseData['data'] != null) {
-        final List<dynamic> itemsJson = responseData['data'];
-        return itemsJson.map((json) => Item.fromJson(json)).toList();
-      }
-      return [];
-    } else {
-      throw Exception('Failed to search items');
+      final responseData = _decodeJson(response.body);
+      final List<dynamic>? itemsJson = responseData['data'] as List<dynamic>?;
+      if (itemsJson == null) return const [];
+      return itemsJson.map((json) => Item.fromJson(json)).toList();
     }
+
+    throw ApiException(response.statusCode, _extractError(response));
+  }
+
+  Future<http.Response> _get({required String path}) {
+    return _send(method: 'GET', path: path, includeJsonContentType: false);
+  }
+
+  Future<http.Response> _post({
+    required String path,
+    required Map<String, dynamic> body,
+  }) {
+    return _send(
+      method: 'POST',
+      path: path,
+      jsonBody: body,
+      includeJsonContentType: true,
+    );
+  }
+
+  Future<http.Response> _send({
+    required String method,
+    required String path,
+    Map<String, dynamic>? jsonBody,
+    bool includeJsonContentType = true,
+  }) async {
+    final normalizedPath = _normalizePath(path);
+    final uri = _buildUri(normalizedPath);
+
+    debugPrint('ApiService._send: $method $uri');
+
+    http.Response response;
+    Map<String, String> headers = await _buildHeaders(
+      normalizedPath,
+      includeJsonContentType,
+    );
+
+    try {
+      response = await _dispatch(method, uri, headers, jsonBody);
+      debugPrint(
+        'ApiService._send: Response status ${response.statusCode} for $method $uri',
+      );
+      if (response.statusCode == 401) {
+        debugPrint('ApiService._send: 401 response body: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('ApiService._send: Request error for $method $uri: $e');
+      rethrow;
+    }
+
+    if (response.statusCode == 401 && _shouldAttachToken(normalizedPath)) {
+      debugPrint('ApiService._send: Got 401, retrying with refreshed token');
+      headers = await _buildHeaders(
+        normalizedPath,
+        includeJsonContentType,
+        forceRefresh: true,
+      );
+      response = await _dispatch(method, uri, headers, jsonBody);
+      debugPrint(
+        'ApiService._send: Retry response status ${response.statusCode} for $method $uri',
+      );
+      if (response.statusCode == 401) {
+        debugPrint('ApiService._send: 401 retry response body: ${response.body}');
+      }
+    }
+
+    if (response.statusCode == 401) {
+      final errorMsg = _extractError(response);
+      debugPrint('ApiService._send: Still 401 after retry, error: $errorMsg');
+      throw AuthException(
+        'sign-in-required',
+        'Sign-in required or token expired: $errorMsg',
+      );
+    }
+
+    if (response.statusCode == 403) {
+      debugPrint('ApiService._send: Got 403, throwing forbidden error');
+      throw AuthException('forbidden', 'Permission denied.');
+    }
+
+    return response;
+  }
+
+  Future<Map<String, String>> _buildHeaders(
+    String path,
+    bool includeJsonHeader, {
+    bool forceRefresh = false,
+  }) async {
+    final headers = <String, String>{};
+    if (includeJsonHeader) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    if (!_shouldAttachToken(path)) {
+      debugPrint('ApiService._buildHeaders: Skipping token for path $path');
+      return headers;
+    }
+
+    debugPrint(
+      'ApiService._buildHeaders: Getting token for $path (forceRefresh=$forceRefresh)',
+    );
+    final token = await AuthService.getValidIdToken(forceRefresh: forceRefresh);
+    if (token == null) {
+      debugPrint('ApiService._buildHeaders: Token is null for path $path');
+      throw AuthException(
+        'sign-in-required',
+        'Sign-in required or token expired.',
+      );
+    }
+
+    debugPrint(
+      'ApiService._buildHeaders: Token obtained for $path (length=${token.length})',
+    );
+    debugPrint('ApiService._buildHeaders: Token preview: ${token.substring(0, 50)}...');
+    log('ApiService._buildHeaders: Token: $token');
+
+    headers['Authorization'] = 'Bearer $token';
+    debugPrint('ApiService._buildHeaders: Authorization header set');
+    return headers;
+  }
+
+  bool _shouldAttachToken(String path) {
+    final normalized = _normalizePath(path);
+    return normalized != '/' && normalized != '/health';
+  }
+
+  Uri _buildUri(String path) {
+    return Uri.parse('$baseUrl$path');
+  }
+
+  String _normalizePath(String path) {
+    if (path.isEmpty) return '/';
+    return path.startsWith('/') ? path : '/$path';
+  }
+
+  http.Response _invalidMethod(String method) {
+    throw UnimplementedError('HTTP method $method is not implemented.');
+  }
+
+  Future<http.Response> _dispatch(
+    String method,
+    Uri uri,
+    Map<String, String> headers,
+    Map<String, dynamic>? jsonBody,
+  ) {
+    switch (method.toUpperCase()) {
+      case 'GET':
+        return _client.get(uri, headers: headers);
+      case 'POST':
+        final body = jsonBody != null ? jsonEncode(jsonBody) : null;
+        return _client.post(uri, headers: headers, body: body);
+      default:
+        return Future.sync(() => _invalidMethod(method));
+    }
+  }
+
+  Map<String, dynamic> _decodeJson(String source) {
+    if (source.isEmpty) return <String, dynamic>{};
+    final decoded = jsonDecode(source);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    throw const FormatException('Unexpected JSON structure.');
+  }
+
+  String _extractError(http.Response response) {
+    try {
+      final json = _decodeJson(response.body);
+      final dynamic message = json['error'] ?? json['message'];
+      if (message is String && message.isNotEmpty) {
+        return message;
+      }
+    } catch (_) {
+      // ignore parse errors
+    }
+    return 'Request failed with status code ${response.statusCode}.';
   }
 }

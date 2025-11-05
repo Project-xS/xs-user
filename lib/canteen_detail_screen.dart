@@ -8,7 +8,6 @@ import 'package:xs_user/cart_screen.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/menu_provider.dart';
 
-
 class CanteenDetailScreen extends StatefulWidget {
   final Canteen canteen;
 
@@ -18,13 +17,7 @@ class CanteenDetailScreen extends StatefulWidget {
   State<CanteenDetailScreen> createState() => _CanteenDetailScreenState();
 }
 
-enum SortOption {
-  name,
-  popularity,
-  priceAsc,
-  veg,
-  nonVeg,
-}
+enum SortOption { name, popularity, priceAsc, veg, nonVeg }
 
 class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   SortOption _currentSortOption = SortOption.name;
@@ -32,12 +25,19 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   @override
   void initState() {
     super.initState();
-    Provider.of<MenuProvider>(context, listen: false).fetchMenuItems(widget.canteen.id);
+    Provider.of<MenuProvider>(
+      context,
+      listen: false,
+    ).fetchMenuItems(widget.canteen.id);
   }
 
-    List<Item> _applySortToItems(List<Item> items) {
-    List<Item> availableItems = items.where((item) => item.isAvailable).toList();
-    List<Item> unavailableItems = items.where((item) => !item.isAvailable).toList();
+  List<Item> _applySortToItems(List<Item> items) {
+    List<Item> availableItems = items
+        .where((item) => item.isAvailable)
+        .toList();
+    List<Item> unavailableItems = items
+        .where((item) => !item.isAvailable)
+        .toList();
 
     Comparator<Item> comparator;
 
@@ -54,12 +54,16 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
         break;
       case SortOption.veg:
         availableItems = availableItems.where((item) => item.isVeg).toList();
-        unavailableItems = unavailableItems.where((item) => item.isVeg).toList();
+        unavailableItems = unavailableItems
+            .where((item) => item.isVeg)
+            .toList();
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
       case SortOption.nonVeg:
         availableItems = availableItems.where((item) => !item.isVeg).toList();
-        unavailableItems = unavailableItems.where((item) => !item.isVeg).toList();
+        unavailableItems = unavailableItems
+            .where((item) => !item.isVeg)
+            .toList();
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
     }
@@ -70,10 +74,6 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
     return [...availableItems, ...unavailableItems];
   }
 
-  
-
-  
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,7 +82,10 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).iconTheme.color,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -107,18 +110,19 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const CartScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const CartScreen()),
                 );
               },
-              icon: Icon(Icons.shopping_cart_outlined, color: Theme.of(context).iconTheme.color),
+              icon: Icon(
+                Icons.shopping_cart_outlined,
+                color: Theme.of(context).iconTheme.color,
+              ),
             ),
           ),
         ],
       ),
       body: Column(
-        children: [    
+        children: [
           Hero(
             tag: 'canteen_image_${widget.canteen.id}',
             child: SizedBox(
@@ -127,17 +131,15 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  (widget.canteen.pic != null)?
-                    ExtendedImage.network(
-                      widget.canteen.pic!,
-                      cache: true,
-                      cacheKey: widget.canteen.etag,
-                      fit: BoxFit.cover,
-                    ):
-                Center(
-                      child: Icon(Icons.store)
-                    ),
-                Container(
+                  (widget.canteen.pic != null)
+                      ? ExtendedImage.network(
+                          widget.canteen.pic!,
+                          cache: true,
+                          cacheKey: widget.canteen.etag,
+                          fit: BoxFit.cover,
+                        )
+                      : Center(child: Icon(Icons.store)),
+                  Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -174,11 +176,18 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.star, color: Color(0xFFFFCB44), size: 16),
+                            const Icon(
+                              Icons.star,
+                              color: Color(0xFFFFCB44),
+                              size: 16,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               widget.canteen.rating.toString(),
-                              style: GoogleFonts.montserrat(color: Colors.white, fontSize: 12),
+                              style: GoogleFonts.montserrat(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
@@ -196,7 +205,9 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                 children: [
                   TabBar(
                     labelColor: const Color(0xFFFF7A3A),
-                    unselectedLabelColor: Theme.of(context).textTheme.bodyMedium?.color,
+                    unselectedLabelColor: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.color,
                     indicatorColor: const Color(0xFFFF7A3A),
                     tabs: const [
                       Tab(text: 'Menu'),
@@ -204,7 +215,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                       Tab(text: 'Info'),
                     ],
                   ),
-                  
+
                   Expanded(
                     child: TabBarView(
                       children: [
@@ -233,7 +244,10 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
             children: [
               DropdownButton<SortOption>(
                 value: _currentSortOption,
-                icon: Icon(Icons.sort, color: Theme.of(context).iconTheme.color),
+                icon: Icon(
+                  Icons.sort,
+                  color: Theme.of(context).iconTheme.color,
+                ),
                 underline: Container(),
                 focusColor: Colors.transparent,
                 onChanged: (SortOption? newValue) {
@@ -243,39 +257,44 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                     });
                   }
                 },
-                items: const <DropdownMenuItem<SortOption>>[
-                  DropdownMenuItem(
-                    value: SortOption.name,
-                    child: Text('Sort by Name'),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.popularity,
-                    child: Text('Sort by Popularity'),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.priceAsc,
-                    child: Text('Sort by Price (Low to High)'),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.veg,
-                    child: Text('Sort by Vegetarian'),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.nonVeg,
-                    child: Text('Sort by Non-Vegetarian'),
-                  ),
-                ].map<DropdownMenuItem<SortOption>>((DropdownMenuItem<SortOption> item) {
-                  return DropdownMenuItem<SortOption>(
-                    value: item.value,
-                    child: Text(
-                      item.child is Text ? (item.child as Text).data! : '',
-                      style: GoogleFonts.montserrat(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                        fontSize: 14,
+                items:
+                    const <DropdownMenuItem<SortOption>>[
+                      DropdownMenuItem(
+                        value: SortOption.name,
+                        child: Text('Sort by Name'),
                       ),
-                    ),
-                  );
-                }).toList(),
+                      DropdownMenuItem(
+                        value: SortOption.popularity,
+                        child: Text('Sort by Popularity'),
+                      ),
+                      DropdownMenuItem(
+                        value: SortOption.priceAsc,
+                        child: Text('Sort by Price (Low to High)'),
+                      ),
+                      DropdownMenuItem(
+                        value: SortOption.veg,
+                        child: Text('Sort by Vegetarian'),
+                      ),
+                      DropdownMenuItem(
+                        value: SortOption.nonVeg,
+                        child: Text('Sort by Non-Vegetarian'),
+                      ),
+                    ].map<DropdownMenuItem<SortOption>>((
+                      DropdownMenuItem<SortOption> item,
+                    ) {
+                      return DropdownMenuItem<SortOption>(
+                        value: item.value,
+                        child: Text(
+                          item.child is Text ? (item.child as Text).data! : '',
+                          style: GoogleFonts.montserrat(
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
+                            fontSize: 14,
+                          ),
+                        ),
+                      );
+                    }).toList(),
               ),
             ],
           ),
@@ -283,8 +302,10 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
         Expanded(
           child: Consumer<MenuProvider>(
             builder: (context, menuProvider, child) {
-              if (menuProvider.getMenuItems(widget.canteen.id).isNotEmpty){
-                List<Item> items = _applySortToItems(menuProvider.getMenuItems(widget.canteen.id));
+              if (menuProvider.getMenuItems(widget.canteen.id).isNotEmpty) {
+                List<Item> items = _applySortToItems(
+                  menuProvider.getMenuItems(widget.canteen.id),
+                );
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: items.length,
@@ -297,7 +318,8 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                   },
                 );
               }
-              if (menuProvider.isLoading(widget.canteen.id) && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
+              if (menuProvider.isLoading(widget.canteen.id) &&
+                  menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -305,7 +327,9 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                 return const Center(child: Text('No items found.'));
               }
 
-              List<Item> items = _applySortToItems(menuProvider.getMenuItems(widget.canteen.id));
+              List<Item> items = _applySortToItems(
+                menuProvider.getMenuItems(widget.canteen.id),
+              );
 
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -328,7 +352,8 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   Widget _buildReviewsTab(BuildContext context) {
     return Consumer<MenuProvider>(
       builder: (context, menuProvider, child) {
-        if (menuProvider.isLoading(widget.canteen.id) && menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
+        if (menuProvider.isLoading(widget.canteen.id) &&
+            menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -354,26 +379,35 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: 
-                          (item.pic != null)? ExtendedImage.network(
-                            item.pic!,
-                            cache: true,
-                            cacheKey: item.etag,
-                            width: 50,
-                            height: 50,
-                          ): Container(
-                            width: 50,
-                            height: 50,
-                            color: Colors.grey.withAlpha((255 * 0.1).round()),
-                            child: Icon(Icons.fastfood, color: Theme.of(context).iconTheme.color, size: 20),
-                          ),
+                          child: (item.pic != null)
+                              ? ExtendedImage.network(
+                                  item.pic!,
+                                  cache: true,
+                                  cacheKey: item.etag,
+                                  width: 50,
+                                  height: 50,
+                                )
+                              : Container(
+                                  width: 50,
+                                  height: 50,
+                                  color: Colors.grey.withAlpha(
+                                    (255 * 0.1).round(),
+                                  ),
+                                  child: Icon(
+                                    Icons.fastfood,
+                                    color: Theme.of(context).iconTheme.color,
+                                    size: 20,
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             item.name,
                             style: GoogleFonts.montserrat(
-                              color: Theme.of(context).textTheme.titleLarge?.color,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.titleLarge?.color,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -383,7 +417,18 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                     ),
                     const SizedBox(height: 8),
                     Row(
-                      children: List.generate(5, (i) => Icon(Icons.star, color: i < 4 ? const Color(0xFFFFCB44) : Theme.of(context).iconTheme.color?.withAlpha((255 * 0.5).round()), size: 16)),
+                      children: List.generate(
+                        5,
+                        (i) => Icon(
+                          Icons.star,
+                          color: i < 4
+                              ? const Color(0xFFFFCB44)
+                              : Theme.of(context).iconTheme.color?.withAlpha(
+                                  (255 * 0.5).round(),
+                                ),
+                          size: 16,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -417,201 +462,262 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   }
 }
 
-  Widget _buildMenuItem({required Item item, required int canteenId}) {
-    return Consumer<CartProvider>(
-      builder: (context, cart, child) {
-        final cartItem = cart.items.containsKey(item.id.toString()) ? cart.items[item.id.toString()] : null;
-        final bool canAddItem = item.isAvailable && (item.stock > 0 || item.stock == -1);
+Widget _buildMenuItem({required Item item, required int canteenId}) {
+  return Consumer<CartProvider>(
+    builder: (context, cart, child) {
+      final cartItem = cart.items.containsKey(item.id.toString())
+          ? cart.items[item.id.toString()]
+          : null;
+      final bool canAddItem =
+          item.isAvailable && (item.stock > 0 || item.stock == -1);
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: ColorFiltered(
-                  colorFilter: item.isAvailable
-                      ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
-                      : ColorFilter.mode(Colors.black, BlendMode.saturation),
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    color: Colors.grey.withAlpha((255 * 0.1).round()),
-                    child: Stack(
-                      children: [
-                        (item.pic != null)? ExtendedImage.network(
-                          item.pic!,
-                          cacheKey: item.etag,
-                          cache: true,
-                          width: 70,
-                          height: 70,
-                          fit: BoxFit.cover,
-                        ): Center(
-                            child: Icon(
-                              Icons.fastfood,
-                              color: item.isAvailable
-                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary)
-                                  : Theme.of(context).iconTheme.color,
-                              size: 30,
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: ColorFiltered(
+                colorFilter: item.isAvailable
+                    ? const ColorFilter.mode(
+                        Colors.transparent,
+                        BlendMode.multiply,
+                      )
+                    : ColorFilter.mode(Colors.black, BlendMode.saturation),
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  color: Colors.grey.withAlpha((255 * 0.1).round()),
+                  child: Stack(
+                    children: [
+                      (item.pic != null)
+                          ? ExtendedImage.network(
+                              item.pic!,
+                              cacheKey: item.etag,
+                              cache: true,
+                              width: 70,
+                              height: 70,
+                              fit: BoxFit.cover,
+                            )
+                          : Center(
+                              child: Icon(
+                                Icons.fastfood,
+                                color: item.isAvailable
+                                    ? (Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.white
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.primary)
+                                    : Theme.of(context).iconTheme.color,
+                                size: 30,
+                              ),
                             ),
-                          ),
-                        if (!item.isAvailable)
-                          Positioned.fill(
-                            child: Container(
-                              color: Colors.black.withAlpha((255 * 0.6).round()),
-                              child: Center(
-                                child: Text(
-                                  'Out of Stock',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.montserrat(
-                                    color: const Color.fromARGB(165, 255, 255, 255),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                      if (!item.isAvailable)
+                        Positioned.fill(
+                          child: Container(
+                            color: Colors.black.withAlpha((255 * 0.6).round()),
+                            child: Center(
+                              child: Text(
+                                'Out of Stock',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  color: const Color.fromARGB(
+                                    165,
+                                    255,
+                                    255,
+                                    255,
                                   ),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: (item.isVeg)? Color(0xFF1BB05A): Colors.red,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Icon(
-                              (item.isVeg)? Icons.eco: Icons.kebab_dining,
-                              color: Colors.white,
-                              size: 12,
-                            ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: (item.isVeg) ? Color(0xFF1BB05A) : Colors.red,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Icon(
+                          (item.isVeg) ? Icons.eco : Icons.kebab_dining,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          item.name,
+                          style: GoogleFonts.montserrat(
+                            color: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            item.name,
-                            style: GoogleFonts.montserrat(
-                              color: Theme.of(context).textTheme.titleLarge?.color,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    (item.stock == -1)
+                        ? "Available"
+                        : "${(item.isAvailable) ? item.stock : 0} items left",
+                    style: GoogleFonts.montserrat(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '₹${item.price.toStringAsFixed(0)}',
+                    style: GoogleFonts.montserrat(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (canAddItem)
+              cartItem == null
+                  ? SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (cartItem == null || cartItem.quantity < 20) {
+                            cart.addItem(
+                              item.id.toString(),
+                              item.name,
+                              item.price,
+                              canteenId,
+                              item.pic,
+                              item.etag,
+                              item.isVeg,
+                              item.stock,
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'You can only add up to 20 of each item.',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                          shape: const CircleBorder(),
+                          padding: EdgeInsets.zero,
+                          elevation: 4,
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            cart.removeSingleItem(item.id.toString());
+                          },
+                          icon: Icon(
+                            Icons.remove_circle_outline,
+                            color: Theme.of(context).iconTheme.color,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          cartItem.quantity.toString(),
+                          style: GoogleFonts.montserrat(
+                            color: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      (item.stock == -1)?"Available":"${(item.isAvailable)?item.stock:0} items left",
-                      style: GoogleFonts.montserrat(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                        fontSize: 12,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '₹${item.price.toStringAsFixed(0)}',
-                      style: GoogleFonts.montserrat(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (canAddItem)
-                cartItem == null
-                    ? SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: ElevatedButton(
+                        const SizedBox(width: 8),
+                        IconButton(
                           onPressed: () {
-                            if (cartItem == null || cartItem.quantity < 20) {
-                              cart.addItem(item.id.toString(), item.name, item.price, canteenId, item.pic, item.etag, item.isVeg, item.stock);
+                            if (cartItem.quantity < 20) {
+                              cart.addItem(
+                                item.id.toString(),
+                                item.name,
+                                item.price,
+                                canteenId,
+                                item.pic,
+                                item.etag,
+                                item.isVeg,
+                                item.stock,
+                              );
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('You can only add up to 20 of each item.')),
+                                const SnackBar(
+                                  content: Text(
+                                    'You can only add up to 20 of each item.',
+                                  ),
+                                ),
                               );
                             }
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            shape: const CircleBorder(),
-                            padding: EdgeInsets.zero,
-                            elevation: 4,
+                          icon: Icon(
+                            Icons.add_circle_outline,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
-                          child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimary),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                      )
-                    : Row(
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              cart.removeSingleItem(item.id.toString());
-                            },
-                            icon: Icon(Icons.remove_circle_outline, color: Theme.of(context).iconTheme.color),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            cartItem.quantity.toString(),
-                            style: GoogleFonts.montserrat(
-                              color: Theme.of(context).textTheme.titleMedium?.color,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: () {
-                              if (cartItem.quantity < 20) {
-                                cart.addItem(item.id.toString(), item.name, item.price, canteenId, item.pic, item.etag, item.isVeg, item.stock);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('You can only add up to 20 of each item.')),
-                                );
-                              }
-                            },
-                            icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
-                      )
-              else
-                Text(
-                  'Unavailable',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.red,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      ],
+                    )
+            else
+              Text(
+                'Unavailable',
+                style: GoogleFonts.montserrat(
+                  color: Colors.red,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}

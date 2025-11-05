@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:xs_user/api_service.dart';
+import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/models.dart';
 
 class CanteenProvider extends ChangeNotifier {
@@ -26,6 +27,8 @@ class CanteenProvider extends ChangeNotifier {
     try {
       _canteens = await ApiService().getActiveCanteens();
       _lastFetchTime = now;
+    } on AuthException {
+      rethrow;
     } catch (e) {
       debugPrint('Error fetching canteens: $e');
     } finally {

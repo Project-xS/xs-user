@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -13,9 +12,7 @@ class UserAnalyticsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Analytics'),
-      ),
+      appBar: AppBar(title: const Text('My Analytics')),
       body: Consumer<OrderProvider>(
         builder: (context, orderProvider, child) {
           if (orderProvider.isLoading) {
@@ -68,10 +65,14 @@ class UserAnalyticsScreen extends StatelessWidget {
   Map<String, double> _calculateMonthlyOrderedValue(List<Order> orders) {
     final Map<String, double> monthlyValues = {};
     for (var order in orders) {
-      final month = DateFormat('MMM').format(
-          DateTime.fromMillisecondsSinceEpoch(order.orderedAt * 1000));
-      monthlyValues.update(month, (value) => value + order.totalPrice,
-          ifAbsent: () => order.totalPrice.toDouble());
+      final month = DateFormat(
+        'MMM',
+      ).format(DateTime.fromMillisecondsSinceEpoch(order.orderedAt * 1000));
+      monthlyValues.update(
+        month,
+        (value) => value + order.totalPrice,
+        ifAbsent: () => order.totalPrice.toDouble(),
+      );
     }
     return monthlyValues;
   }
@@ -95,8 +96,11 @@ class UserAnalyticsScreen extends StatelessWidget {
     final Map<String, int> itemCounts = {};
     for (var order in orders) {
       for (var item in order.items) {
-        itemCounts.update(item.name, (value) => value + item.quantity,
-            ifAbsent: () => item.quantity);
+        itemCounts.update(
+          item.name,
+          (value) => value + item.quantity,
+          ifAbsent: () => item.quantity,
+        );
       }
     }
     if (itemCounts.isEmpty) {
@@ -115,7 +119,9 @@ class UserAnalyticsScreen extends StatelessWidget {
   }
 
   Widget _buildMonthlyValueChart(
-      BuildContext context, Map<String, double> monthlyData) {
+    BuildContext context,
+    Map<String, double> monthlyData,
+  ) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -133,27 +139,35 @@ class UserAnalyticsScreen extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: SizedBox(
                 height: 210,
-                width: max(MediaQuery.of(context).size.width - 75, monthlyData.length * 55.0),
+                width: max(
+                  MediaQuery.of(context).size.width - 75,
+                  monthlyData.length * 55.0,
+                ),
                 child: BarChart(
                   BarChartData(
                     borderData: FlBorderData(
                       show: true,
-                      border: Border.all(
-                        color: Theme.of(context).dividerColor,
-                      ),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
                     alignment: BarChartAlignment.spaceAround,
-                    maxY: (monthlyData.values.isEmpty
+                    maxY:
+                        (monthlyData.values.isEmpty
                             ? 0
-                            : monthlyData.values.reduce((a, b) => a > b ? a : b)) * 1.2,
+                            : monthlyData.values.reduce(
+                                (a, b) => a > b ? a : b,
+                              )) *
+                        1.2,
                     barGroups: monthlyData.entries.map((entry) {
-                      final index = monthlyData.keys.toList().indexOf(entry.key);
+                      final index = monthlyData.keys.toList().indexOf(
+                        entry.key,
+                      );
                       return BarChartGroupData(
                         x: index,
                         barRods: [
                           BarChartRodData(
                             toY: entry.value,
-                            color: Theme.of(context).brightness == Brightness.dark
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).primaryColor,
                             width: 16,
@@ -185,8 +199,10 @@ class UserAnalyticsScreen extends StatelessWidget {
                             if (index >= 0 && index < monthlyData.keys.length) {
                               return Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(monthlyData.keys.toList()[index], 
-                                    style: const TextStyle(fontSize: 12)),
+                                child: Text(
+                                  monthlyData.keys.toList()[index],
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                               );
                             }
                             return const Text('');
@@ -194,10 +210,12 @@ class UserAnalyticsScreen extends StatelessWidget {
                           reservedSize: 40,
                         ),
                       ),
-                      topTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles:
-                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                     ),
                   ),
                 ),
@@ -210,7 +228,9 @@ class UserAnalyticsScreen extends StatelessWidget {
   }
 
   Widget _buildVegNonVegChart(
-      BuildContext context, Map<String, int> vegNonVegData) {
+    BuildContext context,
+    Map<String, int> vegNonVegData,
+  ) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -236,9 +256,10 @@ class UserAnalyticsScreen extends StatelessWidget {
                       title: '${entry.key}\n(${entry.value})',
                       radius: 80,
                       titleStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     );
                   }).toList(),
                   sectionsSpace: 2,
@@ -270,10 +291,9 @@ class UserAnalyticsScreen extends StatelessWidget {
             Center(
               child: Text(
                 mostOrderedItem,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -285,8 +305,12 @@ class UserAnalyticsScreen extends StatelessWidget {
   String _formatDuration(int totalMinutes) {
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
-    final hoursString = hours > 0 ? '$hours ${hours == 1 ? 'hour' : 'hours'}' : '';
-    final minutesString = minutes > 0 ? '$minutes ${minutes == 1 ? 'minute' : 'minutes'}' : '';
+    final hoursString = hours > 0
+        ? '$hours ${hours == 1 ? 'hour' : 'hours'}'
+        : '';
+    final minutesString = minutes > 0
+        ? '$minutes ${minutes == 1 ? 'minute' : 'minutes'}'
+        : '';
     return [hoursString, minutesString].where((s) => s.isNotEmpty).join(' ');
   }
 
@@ -299,18 +323,14 @@ class UserAnalyticsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Time Saved',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Time Saved', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             Center(
               child: Text(
                 _formatDuration(timeSaved),
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 8),

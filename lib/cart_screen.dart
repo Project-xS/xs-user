@@ -17,7 +17,10 @@ class CartScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).iconTheme.color,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -52,10 +55,22 @@ class CartScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _buildPriceRow('Subtotal', '₹${cart.totalAmount.toStringAsFixed(2)}', context),
+                _buildPriceRow(
+                  'Subtotal',
+                  '₹${cart.totalAmount.toStringAsFixed(2)}',
+                  context,
+                ),
                 const SizedBox(height: 8),
-                Divider(color: Theme.of(context).textTheme.bodyMedium?.color, height: 32),
-                _buildPriceRow('Total', '₹${cart.totalAmount.toStringAsFixed(2)}', context, isTotal: true),
+                Divider(
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                  height: 32,
+                ),
+                _buildPriceRow(
+                  'Total',
+                  '₹${cart.totalAmount.toStringAsFixed(2)}',
+                  context,
+                  isTotal: true,
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
@@ -101,8 +116,7 @@ class CartScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: 
-            item.pic!=null
+            child: item.pic != null
                 ? ExtendedImage.network(
                     item.pic!,
                     cache: true,
@@ -153,7 +167,10 @@ class CartScreen extends StatelessWidget {
                 onPressed: () {
                   cart.removeSingleItem(item.id);
                 },
-                icon: Icon(Icons.remove_circle_outline, color: Theme.of(context).iconTheme.color),
+                icon: Icon(
+                  Icons.remove_circle_outline,
+                  color: Theme.of(context).iconTheme.color,
+                ),
               ),
               Text(
                 item.quantity.toString(),
@@ -165,9 +182,21 @@ class CartScreen extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () {
-                  cart.addItem(item.id, item.name, item.price, cart.canteenId!, item.pic, item.etag, item.isVeg, item.stock);
+                  cart.addItem(
+                    item.id,
+                    item.name,
+                    item.price,
+                    cart.canteenId!,
+                    item.pic,
+                    item.etag,
+                    item.isVeg,
+                    item.stock,
+                  );
                 },
-                icon: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
+                icon: Icon(
+                  Icons.add_circle_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ],
           ),
@@ -176,14 +205,21 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceRow(String title, String price, BuildContext context, {bool isTotal = false}) {
+  Widget _buildPriceRow(
+    String title,
+    String price,
+    BuildContext context, {
+    bool isTotal = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
           style: GoogleFonts.montserrat(
-            color: isTotal ? Theme.of(context).textTheme.titleLarge?.color : Theme.of(context).textTheme.bodyMedium?.color,
+            color: isTotal
+                ? Theme.of(context).textTheme.titleLarge?.color
+                : Theme.of(context).textTheme.bodyMedium?.color,
             fontSize: isTotal ? 18 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           ),
@@ -191,7 +227,9 @@ class CartScreen extends StatelessWidget {
         Text(
           price,
           style: GoogleFonts.montserrat(
-            color: isTotal ? Theme.of(context).textTheme.titleLarge?.color : Theme.of(context).textTheme.bodyMedium?.color,
+            color: isTotal
+                ? Theme.of(context).textTheme.titleLarge?.color
+                : Theme.of(context).textTheme.bodyMedium?.color,
             fontSize: isTotal ? 18 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           ),

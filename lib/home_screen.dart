@@ -3,7 +3,7 @@ import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/canteen_detail_screen.dart';
@@ -18,10 +18,8 @@ import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/profile_screen.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:xs_user/canteen_provider.dart';
-import 'package:xs_user/user_preferences.dart';
 import 'package:xs_user/order_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -49,10 +47,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _initializationService =
-        Provider.of<InitializationService>(context, listen: false);
+    _initializationService = Provider.of<InitializationService>(
+      context,
+      listen: false,
+    );
     _initializationService.addListener(_onInitializationChange);
-    _initializationService.initializeSupabaseAndGoogle();
+    _initializationService.initializeFirebaseAndGoogle();
   }
 
   @override
@@ -69,8 +69,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (_initializationService.status == InitializationStatus.initialized) {
       _fetchInitialData();
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) {
+          _showReLoginDialog();
+        }
+        return;
+      }
 
       final bool isSessionValid = await AuthService.isGoogleSessionValid();
       if (!isSessionValid && mounted) {
@@ -80,31 +85,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchInitialData() async {
-    final userIdString = await UserPreferences.getUserId();
-    if (userIdString != null) {
-      final userId = int.tryParse(userIdString);
-      if (userId != null) {
-        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(userId);
-      }
-      else{
-        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(1);
-      }
-    }
+    Provider.of<OrderProvider>(
+      (mounted) ? context : context,
+      listen: false,
+    ).fetchOrders();
   }
 
   void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   Future<void> _signOut() async {
-    await AuthService.signOutGoogle();
-    await Supabase.instance.client.auth.signOut();
-    await UserPreferences.clearUserId();
+    await AuthService.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('userEmail');
     await prefs.remove('hasSeenOnboarding');
@@ -118,7 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return AlertDialog(
           title: const Text("Session Expired"),
           content: const Text(
-              "Your session has expired or access was revoked. Please sign in again."),
+            "Your session has expired or access was revoked. Please sign in again.",
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text("OK"),
@@ -127,7 +122,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                        builder: (context) => const LoginScreen()),
+                      builder: (context) => const LoginScreen(),
+                    ),
                     (Route<dynamic> route) => false,
                   );
                 }
@@ -145,20 +141,19 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor:
-            Theme.of(context).bottomNavigationBarTheme.backgroundColor,
-        selectedItemColor:
-            Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
-        unselectedItemColor:
-            Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
-        selectedLabelStyle:
-            GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+        backgroundColor: Theme.of(
+          context,
+        ).bottomNavigationBarTheme.backgroundColor,
+        selectedItemColor: Theme.of(
+          context,
+        ).bottomNavigationBarTheme.selectedItemColor,
+        unselectedItemColor: Theme.of(
+          context,
+        ).bottomNavigationBarTheme.unselectedItemColor,
+        selectedLabelStyle: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
         unselectedLabelStyle: GoogleFonts.montserrat(),
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: 'Home',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long),
             label: 'Orders',
@@ -175,7 +170,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-
 class HomeScreenBody extends StatefulWidget {
   const HomeScreenBody({super.key});
 
@@ -183,13 +177,7 @@ class HomeScreenBody extends StatefulWidget {
   State<HomeScreenBody> createState() => HomeScreenBodyState();
 }
 
-enum SortOption {
-  name,
-  popularity,
-  veg,
-  nonVeg,
-  priceAsc,
-}
+enum SortOption { name, popularity, veg, nonVeg, priceAsc }
 
 class HomeScreenBodyState extends State<HomeScreenBody> {
   Future<List<Item>>? _searchResults;
@@ -202,7 +190,15 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
   void initState() {
     super.initState();
     _canteenProvider = Provider.of<CanteenProvider>(context, listen: false);
-    _canteenProvider.fetchCanteens();
+    Future.microtask(() {
+      _canteenProvider.fetchCanteens().catchError((error) {
+        if (error is AuthException && mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(error.message)));
+        }
+      });
+    });
     _canteenProvider.addListener(_onCanteensLoaded);
 
     _searchController.addListener(() {
@@ -233,7 +229,15 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
     if (!_canteenProvider.isLoading && _canteenProvider.canteens.isNotEmpty) {
       final menuProvider = Provider.of<MenuProvider>(context, listen: false);
       for (var canteen in _canteenProvider.canteens) {
-        menuProvider.fetchMenuItems(canteen.id, force: true);
+        menuProvider.fetchMenuItems(canteen.id, force: true).catchError((
+          error,
+        ) {
+          if (error is AuthException && mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(error.message)));
+          }
+        });
       }
     }
   }
@@ -281,8 +285,9 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
           color: _currentSortOption == option
               ? Theme.of(context).colorScheme.primary
               : Theme.of(context).textTheme.bodyMedium?.color,
-          fontWeight:
-              _currentSortOption == option ? FontWeight.bold : FontWeight.normal,
+          fontWeight: _currentSortOption == option
+              ? FontWeight.bold
+              : FontWeight.normal,
         ),
       ),
       trailing: _currentSortOption == option
@@ -304,10 +309,12 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
   }
 
   List<Item> _applySortToItems(List<Item> items) {
-    List<Item> availableItems =
-        items.where((item) => item.isAvailable).toList();
-    List<Item> unavailableItems =
-        items.where((item) => !item.isAvailable).toList();
+    List<Item> availableItems = items
+        .where((item) => item.isAvailable)
+        .toList();
+    List<Item> unavailableItems = items
+        .where((item) => !item.isAvailable)
+        .toList();
 
     Comparator<Item> comparator;
 
@@ -323,14 +330,16 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
         break;
       case SortOption.veg:
         availableItems = availableItems.where((item) => item.isVeg).toList();
-        unavailableItems =
-            unavailableItems.where((item) => item.isVeg).toList();
+        unavailableItems = unavailableItems
+            .where((item) => item.isVeg)
+            .toList();
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
       case SortOption.nonVeg:
         availableItems = availableItems.where((item) => !item.isVeg).toList();
-        unavailableItems =
-            unavailableItems.where((item) => !item.isVeg).toList();
+        unavailableItems = unavailableItems
+            .where((item) => !item.isVeg)
+            .toList();
         comparator = (a, b) => a.name.compareTo(b.name);
         break;
     }
@@ -421,8 +430,10 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                   ),
                 );
               },
-              icon: Icon(Icons.notifications_none_outlined,
-                  color: Theme.of(context).iconTheme.color),
+              icon: Icon(
+                Icons.notifications_none_outlined,
+                color: Theme.of(context).iconTheme.color,
+              ),
             ),
             Consumer<CartProvider>(
               builder: (_, cart, ch) => badges.Badge(
@@ -437,16 +448,16 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const CartScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const CartScreen()),
                   );
                 },
-                icon: Icon(Icons.shopping_cart_outlined,
-                    color: Theme.of(context).iconTheme.color),
+                icon: Icon(
+                  Icons.shopping_cart_outlined,
+                  color: Theme.of(context).iconTheme.color,
+                ),
               ),
             ),
-            SizedBox(width: 7)
+            SizedBox(width: 7),
           ],
         ),
         SliverToBoxAdapter(
@@ -455,7 +466,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search for food...', 
+                hintText: 'Search for food...',
                 hintStyle: GoogleFonts.montserrat(
                   color: Theme.of(context).textTheme.bodyMedium?.color,
                   fontSize: 14,
@@ -470,8 +481,10 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                   children: [
                     if (_searchController.text.isNotEmpty)
                       IconButton(
-                        icon: Icon(Icons.clear, 
-                            color: Theme.of(context).iconTheme.color),
+                        icon: Icon(
+                          Icons.clear,
+                          color: Theme.of(context).iconTheme.color,
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
@@ -527,7 +540,8 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 if (_searchResults == null)
                   Consumer<CanteenProvider>(
                     builder: (context, canteenProvider, child) {
-                      if (canteenProvider.isLoading && canteenProvider.canteens.isEmpty) {
+                      if (canteenProvider.isLoading &&
+                          canteenProvider.canteens.isEmpty) {
                         return const SizedBox();
                       }
                       return Text(
@@ -562,23 +576,21 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
           if (canteenProvider.canteens.isEmpty) {
             return SliverToBoxAdapter(
               child: Center(
-                  child: Text('No canteens found.',
-                      style: TextStyle(
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.color))),
+                child: Text(
+                  'No canteens found.',
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                ),
+              ),
             );
           }
 
           return SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final canteen = canteenProvider.canteens[index];
-                return _buildCanteenCard(context, canteen);
-              },
-              childCount: canteenProvider.canteens.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final canteen = canteenProvider.canteens[index];
+              return _buildCanteenCard(context, canteen);
+            }, childCount: canteenProvider.canteens.length),
           );
         },
       ),
@@ -608,28 +620,31 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
               );
             }
             return SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = items[index];
-                  final canteens = Provider.of<CanteenProvider>(context, listen: false).canteens;
-                  final canteen = canteens.firstWhere(
-                      (c) => c.id == item.canteenId,
-                      orElse: () => Canteen(
-                          id: 0,
-                          name: 'Unknown',
-                          location: '',
-                          rating: 0,
-                          etag: null,
-                          pic: null));
-                  return _buildMenuItem(item: item, canteenName: canteen.name);
-                },
-                childCount: items.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final item = items[index];
+                final canteens = Provider.of<CanteenProvider>(
+                  context,
+                  listen: false,
+                ).canteens;
+                final canteen = canteens.firstWhere(
+                  (c) => c.id == item.canteenId,
+                  orElse: () => Canteen(
+                    id: 0,
+                    name: 'Unknown',
+                    location: '',
+                    rating: 0,
+                    etag: null,
+                    pic: null,
+                  ),
+                );
+                return _buildMenuItem(item: item, canteenName: canteen.name);
+              }, childCount: items.length),
             );
           } else {
             return const SliverToBoxAdapter(
-              child:
-                  Center(child: Text('Search for something to get results.')),
+              child: Center(
+                child: Text('Search for something to get results.'),
+              ),
             );
           }
         },
@@ -660,9 +675,13 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 child: ColorFiltered(
                   colorFilter: item.isAvailable
                       ? const ColorFilter.mode(
-                          Colors.transparent, BlendMode.multiply)
-                      : ColorFilter.mode(Colors.black.withAlpha((255 * 0.9).round()),
-                          BlendMode.saturation),
+                          Colors.transparent,
+                          BlendMode.multiply,
+                        )
+                      : ColorFilter.mode(
+                          Colors.black.withAlpha((255 * 0.9).round()),
+                          BlendMode.saturation,
+                        ),
                   child: Container(
                     width: 70,
                     height: 70,
@@ -670,9 +689,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                     child: Stack(
                       children: [
                         Image.asset(
-                          item.isVeg
-                              ? 'assets/veg.jpg'
-                              : 'assets/non_veg.jpg',
+                          item.isVeg ? 'assets/veg.jpg' : 'assets/non_veg.jpg',
                           width: 70,
                           height: 70,
                           fit: BoxFit.cover,
@@ -680,14 +697,20 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                         if (!item.isAvailable)
                           Positioned.fill(
                             child: Container(
-                              color: Colors.black.withAlpha((255 * 0.6).round()),
+                              color: Colors.black.withAlpha(
+                                (255 * 0.6).round(),
+                              ),
                               child: Center(
                                 child: Text(
                                   'Out of Stock',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.montserrat(
                                     color: const Color.fromARGB(
-                                        165, 255, 255, 255),
+                                      165,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -726,8 +749,9 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                           child: Text(
                             item.name,
                             style: GoogleFonts.montserrat(
-                              color:
-                                  Theme.of(context).textTheme.titleLarge?.color,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.titleLarge?.color,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -778,24 +802,28 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                         child: ElevatedButton(
                           onPressed: () {
                             cart.addItem(
-                                item.id.toString(),
-                                item.name,
-                                item.price,
-                                item.canteenId,
-                                item.pic,
-                                item.etag,
-                                item.isVeg,
-                                item.stock);
+                              item.id.toString(),
+                              item.name,
+                              item.price,
+                              item.canteenId,
+                              item.pic,
+                              item.etag,
+                              item.isVeg,
+                              item.stock,
+                            );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
                             shape: const CircleBorder(),
                             padding: EdgeInsets.zero,
                             elevation: 4,
                           ),
-                          child: Icon(Icons.add, 
-                              color: Theme.of(context).colorScheme.onPrimary),
+                          child: Icon(
+                            Icons.add,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
                         ),
                       )
                     : Row(
@@ -804,8 +832,10 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                             onPressed: () {
                               cart.removeSingleItem(item.id.toString());
                             },
-                            icon: Icon(Icons.remove_circle_outline, 
-                                color: Theme.of(context).iconTheme.color),
+                            icon: Icon(
+                              Icons.remove_circle_outline,
+                              color: Theme.of(context).iconTheme.color,
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -813,10 +843,9 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                           Text(
                             cartItem.quantity.toString(),
                             style: GoogleFonts.montserrat(
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.color,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.titleMedium?.color,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -825,17 +854,20 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                           IconButton(
                             onPressed: () {
                               cart.addItem(
-                                  item.id.toString(),
-                                  item.name,
-                                  item.price,
-                                  item.canteenId,
-                                  item.pic,
-                                  item.etag,
-                                  item.isVeg,
-                                  item.stock);
+                                item.id.toString(),
+                                item.name,
+                                item.price,
+                                item.canteenId,
+                                item.pic,
+                                item.etag,
+                                item.isVeg,
+                                item.stock,
+                              );
                             },
-                            icon: Icon(Icons.add_circle_outline, 
-                                color: Theme.of(context).colorScheme.primary),
+                            icon: Icon(
+                              Icons.add_circle_outline,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -879,8 +911,9 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
             BoxShadow(
               offset: const Offset(0, 6),
               blurRadius: 20,
-              color:
-                  Theme.of(context).colorScheme.onSurface.withAlpha((255 * 0.1).round()),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withAlpha((255 * 0.1).round()),
             ),
           ],
         ),
@@ -889,24 +922,23 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
           child: Stack(
             children: [
               Center(
-                child: (canteen.pic != null)? ExtendedImage.network(canteen.pic!, 
-                  cacheKey: canteen.etag,
-                  cache: true,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                ):
-                Icon(Icons.store),
+                child: (canteen.pic != null)
+                    ? ExtendedImage.network(
+                        canteen.pic!,
+                        cacheKey: canteen.etag,
+                        cache: true,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      )
+                    : Icon(Icons.store),
               ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withAlpha(153),
-                    ],
+                    colors: [Colors.transparent, Colors.black.withAlpha(153)],
                   ),
                 ),
               ),
@@ -914,8 +946,10 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
                 top: 16,
                 right: 16,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withAlpha(128),
                     borderRadius: BorderRadius.circular(8),
@@ -926,8 +960,10 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
                       const SizedBox(width: 4),
                       Text(
                         canteen.rating.toStringAsFixed(1),
-                        style:
-                            GoogleFonts.montserrat(color: Colors.white, fontSize: 12),
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -973,7 +1009,9 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? const Color(0xFFFF7A3A)
@@ -983,9 +1021,10 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
                       child: Text(
                         'Open',
                         style: GoogleFonts.montserrat(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600),
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],

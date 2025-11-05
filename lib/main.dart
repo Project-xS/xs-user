@@ -8,11 +8,10 @@ import 'package:xs_user/initialization_service.dart';
 import 'package:xs_user/onboarding_screen.dart';
 import 'package:xs_user/order_provider.dart';
 import 'package:xs_user/theme_provider.dart';
-// import 'package:xs_user/user_preferences.dart';
 import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/menu_provider.dart';
 
-void main(){
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final initializationService = InitializationService();
   runApp(
@@ -28,7 +27,7 @@ void main(){
       child: const MyApp(),
     ),
   );
-   Future.microtask(() => initializationService.initializeSupabaseAndGoogle());
+  Future.microtask(() => initializationService.initializeFirebaseAndGoogle());
 }
 
 class MyApp extends StatefulWidget {
@@ -63,9 +62,7 @@ class _MyAppState extends State<MyApp> {
         brightness: Brightness.light,
         primarySwatch: Colors.purple,
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: GoogleFonts.montserratTextTheme(
-          ThemeData.light().textTheme,
-        ),
+        textTheme: GoogleFonts.montserratTextTheme(ThemeData.light().textTheme),
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.lightBlue[48],
           foregroundColor: Colors.black,
@@ -79,15 +76,21 @@ class _MyAppState extends State<MyApp> {
           unselectedItemColor: Colors.grey,
         ),
         switchTheme: SwitchThemeData(
-          thumbColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          thumbColor: WidgetStateProperty.resolveWith<Color?>((
+            Set<WidgetState> states,
+          ) {
             if (states.contains(WidgetState.selected)) {
               return Theme.of(context).primaryColor;
             }
             return Colors.grey;
           }),
-          trackColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          trackColor: WidgetStateProperty.resolveWith<Color?>((
+            Set<WidgetState> states,
+          ) {
             if (states.contains(WidgetState.selected)) {
-              return Theme.of(context).primaryColor.withAlpha((255 * 0.5).round());
+              return Theme.of(
+                context,
+              ).primaryColor.withAlpha((255 * 0.5).round());
             }
             return Colors.grey.withAlpha((255 * 0.5).round());
           }),
@@ -95,11 +98,11 @@ class _MyAppState extends State<MyApp> {
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        colorScheme: ColorScheme.dark().copyWith(primary: const Color(0xFFFF6B35)),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: GoogleFonts.montserratTextTheme(
-          ThemeData.dark().textTheme,
+        colorScheme: ColorScheme.dark().copyWith(
+          primary: const Color(0xFFFF6B35),
         ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        textTheme: GoogleFonts.montserratTextTheme(ThemeData.dark().textTheme),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF061224),
           foregroundColor: Colors.white,
@@ -113,15 +116,21 @@ class _MyAppState extends State<MyApp> {
           unselectedItemColor: Colors.grey,
         ),
         switchTheme: SwitchThemeData(
-          thumbColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          thumbColor: WidgetStateProperty.resolveWith<Color?>((
+            Set<WidgetState> states,
+          ) {
             if (states.contains(WidgetState.selected)) {
               return Theme.of(context).primaryColor;
             }
             return Colors.grey[700];
           }),
-          trackColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+          trackColor: WidgetStateProperty.resolveWith<Color?>((
+            Set<WidgetState> states,
+          ) {
             if (states.contains(WidgetState.selected)) {
-              return Theme.of(context).primaryColor.withAlpha((255 * 0.5).round());
+              return Theme.of(
+                context,
+              ).primaryColor.withAlpha((255 * 0.5).round());
             }
             return Colors.grey[800];
           }),
@@ -137,7 +146,9 @@ class _MyAppState extends State<MyApp> {
               return const OnboardingScreen();
             }
           } else {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
         },
       ),

@@ -19,7 +19,6 @@ class CheckoutScreen extends StatefulWidget {
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
-
 class _CheckoutScreenState extends State<CheckoutScreen> {
   String _paymentMethod = 'upi';
   String _orderType = 'instant';
@@ -35,8 +34,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
-    _confettiController =
-        ConfettiController(duration: const Duration(seconds: 1));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
   }
 
   @override
@@ -86,20 +86,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           initializationService.removeListener(listener);
         }
       }
+
       initializationService.addListener(listener);
       await completer.future;
-      if(mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
     }
     if (initializationService.status == InitializationStatus.error) {
-       setState(() {
+      setState(() {
         _orderError = 'Initialization failed. Please restart the app.';
         _isPlacingOrder = false;
       });
       return;
     }
 
-    final bool isSessionValid = await AuthService.isGoogleSessionValid();
-    if (isSessionValid == false) {
+    final isSessionValid = await AuthService.isGoogleSessionValid();
+    if (!isSessionValid) {
       setState(() {
         _orderError = 'Your Google session has expired. Please login again.';
         _isPlacingOrder = false;
@@ -107,20 +108,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
     if (cart.items.isEmpty) {
-       setState(() {
-        _isPlacingOrder = false;
-      });
-      return;
-    }
-    bool? validsession = await AuthService.isGoogleSessionValid();
-    if (validsession == false) {
       setState(() {
-        _orderError = 'You are not signed in. Please sign in to place an order.';
         _isPlacingOrder = false;
       });
       return;
     }
-    final menuProvider = Provider.of<MenuProvider>((mounted)?context:context, listen: false);
+    final menuProvider = Provider.of<MenuProvider>(
+      (mounted) ? context : context,
+      listen: false,
+    );
     final canteenId = cart.canteenId;
 
     if (canteenId == null) {
@@ -135,24 +131,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       await menuProvider.fetchMenuItems(canteenId, force: true);
 
       for (final cartItem in cart.items.values) {
-        final menuItem = menuProvider.getMenuItems(canteenId).firstWhere((item) => item.id.toString() == cartItem.id);
-        if (!menuItem.isAvailable || (menuItem.stock != -1 && menuItem.stock < cartItem.quantity)) {
+        final menuItem = menuProvider
+            .getMenuItems(canteenId)
+            .firstWhere((item) => item.id.toString() == cartItem.id);
+        if (!menuItem.isAvailable ||
+            (menuItem.stock != -1 && menuItem.stock < cartItem.quantity)) {
           setState(() {
-            _orderError = '${menuItem.name} is out of stock or chosen quantity is not available.';
+            _orderError =
+                '${menuItem.name} is out of stock or chosen quantity is not available.';
             _isPlacingOrder = false;
           });
           return;
         }
       }
 
-      final itemIds = cart.items.values.expand((item) {
-        return List.generate(item.quantity, (_) => int.parse(item.id));
-      }).toList();
+      final itemIds = cart.items.values
+          .expand(
+            (item) => List.generate(item.quantity, (_) => int.parse(item.id)),
+          )
+          .toList();
 
-      final deliverAt = _orderType == 'preorder' ? _selectedTimeBand : "11:00am - 12:00pm";
-      const userId = 1;
+      final deliverAt = _orderType == 'preorder' ? _selectedTimeBand : null;
 
-      final response = await ApiService().createOrder(userId, itemIds, deliverAt);
+      final response = await ApiService().createOrder(itemIds, deliverAt);
       if (response.status == 'ok') {
         setState(() {
           _orderPlaced = true;
@@ -187,7 +188,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             Theme.of(context).colorScheme.secondary,
                             Colors.pink,
                             Colors.orange,
-                            Colors.purple
+                            Colors.purple,
                           ],
                         ),
                         Text(
@@ -209,11 +210,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
         Timer(const Duration(seconds: 5), () {
           Navigator.of(context).pop();
-          Provider.of<OrderProvider>(context, listen: false).fetchOrders(userId, force: true);
+          Provider.of<OrderProvider>(
+            context,
+            listen: false,
+          ).fetchOrders(force: true);
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => const OrdersListScreen(showBackButton: true),
+              builder: (context) =>
+                  const OrdersListScreen(showBackButton: true),
             ),
             (route) => false,
           );
@@ -223,6 +228,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           _orderError = response.error ?? 'Failed to place order';
         });
       }
+    } on AuthException catch (e) {
+      setState(() {
+        _orderError = e.message;
+      });
+    } on ApiException catch (e) {
+      setState(() {
+        _orderError = e.message;
+      });
     } catch (e) {
       setState(() {
         _orderError = 'Failed to place order: $e';
@@ -242,7 +255,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).iconTheme.color,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -265,7 +281,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Column(
                 children: [
                   RadioListTile(
-                    title: Text('Instant', style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color)),
+                    title: Text(
+                      'Instant',
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.titleMedium?.color,
+                      ),
+                    ),
                     value: 'instant',
                     groupValue: _orderType,
                     onChanged: (value) {
@@ -276,7 +297,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     activeColor: Theme.of(context).colorScheme.primary,
                   ),
                   RadioListTile(
-                    title: Text('Preorder', style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color)),
+                    title: Text(
+                      'Preorder',
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.titleMedium?.color,
+                      ),
+                    ),
                     value: 'preorder',
                     groupValue: _orderType,
                     onChanged: (value) {
@@ -290,16 +316,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     DropdownButton<String>(
                       value: _selectedTimeBand,
                       focusColor: Colors.transparent,
-                      style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color),
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.titleMedium?.color,
+                      ),
                       onChanged: (String? newValue) {
                         setState(() {
                           _selectedTimeBand = newValue!;
                         });
                       },
-                      items: _timeBands.map<DropdownMenuItem<String>>((String value) {
+                      items: _timeBands.map<DropdownMenuItem<String>>((
+                        String value,
+                      ) {
                         return DropdownMenuItem<String>(
                           value: value,
-                          child: Text(value, style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color)),
+                          child: Text(
+                            value,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).textTheme.titleMedium?.color,
+                            ),
+                          ),
                         );
                       }).toList(),
                     ),
@@ -313,7 +350,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Column(
                 children: [
                   RadioListTile(
-                    title: Text('UPI', style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color)),
+                    title: Text(
+                      'UPI',
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.titleMedium?.color,
+                      ),
+                    ),
                     value: 'upi',
                     groupValue: _paymentMethod,
                     onChanged: (value) {
@@ -324,7 +366,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     activeColor: Theme.of(context).colorScheme.primary,
                   ),
                   RadioListTile(
-                    title: Text('Card', style: TextStyle(color: Theme.of(context).textTheme.titleMedium?.color)),
+                    title: Text(
+                      'Card',
+                      style: TextStyle(
+                        color: Theme.of(context).textTheme.titleMedium?.color,
+                      ),
+                    ),
                     value: 'card',
                     groupValue: _paymentMethod,
                     onChanged: (value) {
@@ -370,14 +417,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 Text(
                                   '${item.name}  x${item.quantity}',
                                   style: GoogleFonts.montserrat(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                                    color: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.color,
                                     fontSize: 14,
                                   ),
                                 ),
                                 Text(
                                   '₹${(item.price * item.quantity).toStringAsFixed(2)}',
                                   style: GoogleFonts.montserrat(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                                    color: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.color,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -389,8 +440,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       // _buildPriceRow('Subtotal', '₹${cart.totalAmount.toStringAsFixed(2)}', context),
                       // const SizedBox(height: 8),
                       // _buildPriceRow('Delivery Fee', '₹2.00', context),
-                      Divider(color: Theme.of(context).textTheme.bodyMedium?.color, height: 32),
-                      _buildPriceRow('Total', '₹${cart.totalAmount.toStringAsFixed(2)}', context, isTotal: true),
+                      Divider(
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        height: 32,
+                      ),
+                      _buildPriceRow(
+                        'Total',
+                        '₹${cart.totalAmount.toStringAsFixed(2)}',
+                        context,
+                        isTotal: true,
+                      ),
                     ],
                   );
                 },
@@ -402,7 +461,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: Text(
                   _orderError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 16),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 16,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -421,12 +483,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           Theme.of(context).colorScheme.secondary,
                           Colors.pink,
                           Colors.orange,
-                          Colors.purple
+                          Colors.purple,
                         ],
                       ),
                       Text(
                         'Order Placed Successfully!',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold, decoration: TextDecoration.none),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
                     ],
                   ),
@@ -442,7 +509,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
               child: _isPlacingOrder
-                  ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+                  ? const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    )
                   : Text(
                       'Place Order',
                       style: GoogleFonts.montserrat(
@@ -458,7 +527,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildSectionCard(BuildContext context, {required String title, required Widget child}) {
+  Widget _buildSectionCard(
+    BuildContext context, {
+    required String title,
+    required Widget child,
+  }) {
     return Card(
       color: Theme.of(context).cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -483,14 +556,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildPriceRow(String title, String price, BuildContext context, {bool isTotal = false}) {
+  Widget _buildPriceRow(
+    String title,
+    String price,
+    BuildContext context, {
+    bool isTotal = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
           style: GoogleFonts.montserrat(
-            color: isTotal ? Theme.of(context).textTheme.titleLarge?.color : Theme.of(context).textTheme.bodyMedium?.color,
+            color: isTotal
+                ? Theme.of(context).textTheme.titleLarge?.color
+                : Theme.of(context).textTheme.bodyMedium?.color,
             fontSize: isTotal ? 18 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           ),
@@ -498,7 +578,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         Text(
           price,
           style: GoogleFonts.montserrat(
-            color: isTotal ? Theme.of(context).textTheme.titleLarge?.color : Theme.of(context).textTheme.bodyMedium?.color,
+            color: isTotal
+                ? Theme.of(context).textTheme.titleLarge?.color
+                : Theme.of(context).textTheme.bodyMedium?.color,
             fontSize: isTotal ? 18 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           ),

@@ -1,12 +1,11 @@
-
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xs_user/home_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math' as math;
 import 'package:xs_user/auth_service.dart';
-import 'package:xs_user/user_preferences.dart';
+import 'dart:async';
 
 class LoginScreen extends StatefulWidget {
   final String? snackbarMessage;
@@ -16,10 +15,11 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   late AnimationController _controller;
-  final supabase = Supabase.instance.client;
+  StreamSubscription<User?>? _authSubscription;
 
   @override
   void initState() {
@@ -31,35 +31,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     if (widget.snackbarMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.snackbarMessage!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(widget.snackbarMessage!)));
       });
     }
-    
+
     _setupAuthListener();
   }
 
   void _setupAuthListener() {
-    supabase.auth.onAuthStateChange.listen((data) async {
-      final event = data.event;
-      if (event == AuthChangeEvent.signedIn) {
-        final user = supabase.auth.currentUser;
-        if (user != null) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('hasSeenOnboarding', true);
-          await prefs.setString('userEmail', user.email ?? '');
-          await UserPreferences.setUserId(user.id);
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((
+      user,
+    ) async {
+      if (user == null) return;
 
-          if (mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomeScreen()),
-              );
-            });
-          }
-        }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('hasSeenOnboarding', true);
+      if (user.email != null) {
+        await prefs.setString('userEmail', user.email!);
+      }
+
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        });
       }
     });
   }
@@ -67,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void dispose() {
     _controller.dispose();
+    _authSubscription?.cancel();
     super.dispose();
   }
 
@@ -74,11 +74,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _isLoading = true);
     try {
       await AuthService.signInWithGoogle();
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+      debugPrint('Google sign-in error: ${e.code}');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
       }
       debugPrint('Google sign-in error: $e');
     } finally {
@@ -120,7 +127,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : ElevatedButton.icon(
-                          icon: Image.asset('assets/Google.png', fit: BoxFit.cover, height: 30, width: 30),
+                          icon: Image.asset(
+                            'assets/Google.png',
+                            fit: BoxFit.cover,
+                            height: 30,
+                            width: 30,
+                          ),
                           label: Text(
                             'Sign in with Google',
                             style: GoogleFonts.montserrat(
@@ -132,7 +144,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFF7A3A),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 16),
+                              horizontal: 30,
+                              vertical: 16,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
@@ -156,7 +170,8 @@ class Background extends StatefulWidget {
   State<Background> createState() => _BackgroundState();
 }
 
-class _BackgroundState extends State<Background> with SingleTickerProviderStateMixin {
+class _BackgroundState extends State<Background>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override

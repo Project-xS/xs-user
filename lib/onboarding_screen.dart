@@ -22,9 +22,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void initState() {
     super.initState();
 
-    final initializationService =
-        Provider.of<InitializationService>(context, listen: false);
-    Future.microtask(() => initializationService.initializeSupabaseAndGoogle());
+    final initializationService = Provider.of<InitializationService>(
+      context,
+      listen: false,
+    );
+    Future.microtask(() => initializationService.initializeFirebaseAndGoogle());
   }
 
   Future<void> _completeOnboarding() async {
@@ -33,8 +35,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _isCompleting = true;
     });
 
-    final initializationService =
-        Provider.of<InitializationService>(context, listen: false);
+    final initializationService = Provider.of<InitializationService>(
+      context,
+      listen: false,
+    );
 
     if (initializationService.status != InitializationStatus.initialized) {
       final completer = Completer<void>();
@@ -134,7 +138,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         'Browse through various canteens across campus and\ndiscover delicious meals from your favorite spots.',
                     textColor: Theme.of(context).textTheme.titleLarge?.color,
                     subtitleColor: const Color(0xFFFF7A3A),
-                    descriptionColor: Theme.of(context).textTheme.bodyMedium?.color,
+                    descriptionColor: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.color,
                   ),
                   OnboardingPage(
                     icon: Icons.schedule,
@@ -145,7 +151,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         'Pre-order your meals for specific time slots (11-12pm or 12-1pm) and have them ready when you arrive.',
                     textColor: Theme.of(context).textTheme.titleLarge?.color,
                     subtitleColor: const Color(0xFFFF7A3A),
-                    descriptionColor: Theme.of(context).textTheme.bodyMedium?.color,
+                    descriptionColor: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.color,
                   ),
                   OnboardingPage(
                     icon: Icons.search,
@@ -156,7 +164,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         'Use our smart search and filters to quickly find exactly what you\'re craving from any canteen.',
                     textColor: Theme.of(context).textTheme.titleLarge?.color,
                     subtitleColor: const Color(0xFFFF7A3A),
-                    descriptionColor: Theme.of(context).textTheme.bodyMedium?.color,
+                    descriptionColor: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.color,
                   ),
                 ],
               ),
@@ -236,7 +246,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         borderRadius: BorderRadius.circular(20),
         color: _currentPage == index
             ? const Color(0xFFFF7A3A)
-            : Theme.of(context).textTheme.bodyMedium?.color?.withAlpha((255 * 0.5).round()),
+            : Theme.of(
+                context,
+              ).textTheme.bodyMedium?.color?.withAlpha((255 * 0.5).round()),
       ),
     );
   }
@@ -286,14 +298,10 @@ class OnboardingPage extends StatelessWidget {
                   offset: Offset(0, 6),
                   blurRadius: 18,
                   color: Color.fromRGBO(0, 0, 0, 0.4),
-                )
+                ),
               ],
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 40,
-            ),
+            child: Icon(icon, color: Colors.white, size: 40),
           ),
           const SizedBox(height: 18),
           Text(
@@ -321,11 +329,9 @@ class OnboardingPage extends StatelessWidget {
               color: descriptionColor,
               fontSize: 13,
             ),
-          )
+          ),
         ],
       ),
     );
   }
 }
-
-

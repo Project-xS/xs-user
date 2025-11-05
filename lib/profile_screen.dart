@@ -1,9 +1,9 @@
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:xs_user/login_screen.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/orders_list_screen.dart';
@@ -11,7 +11,6 @@ import 'package:xs_user/theme_provider.dart';
 import 'package:xs_user/help_and_support_screen.dart';
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/user_analytics_screen.dart';
-import 'package:xs_user/user_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -30,14 +29,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<User> _loadUser() async {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
 
     if (currentUser != null) {
-      final userMetadata = currentUser.userMetadata;
-      final name = userMetadata?['full_name'] as String? ?? 'User Name';
+      final name = currentUser.displayName ?? 'User Name';
       final email = currentUser.email ?? 'user@example.com';
-      final profilePictureUrl = userMetadata?['avatar_url'] as String?;
-      // debugPrint('Profile Picture URL: $profilePictureUrl');
+      final profilePictureUrl = currentUser.photoURL;
       return User(
         id: 0,
         rfid: 'N/A',
@@ -82,18 +79,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (snapshot.hasData) {
             final user = snapshot.data!;
-            String cacheKey = user.name.substring(0,1).toUpperCase();
-            if (user.profilePictureUrl != null){
-              cacheKey = user.profilePictureUrl!.split('=').first.split('/').last;
+            String cacheKey = user.name.substring(0, 1).toUpperCase();
+            if (user.profilePictureUrl != null) {
+              cacheKey = user.profilePictureUrl!
+                  .split('=')
+                  .first
+                  .split('/')
+                  .last;
             }
             return Column(
               children: [
                 const SizedBox(height: 24),
                 CircleAvatar(
                   radius: 48,
-                  backgroundImage: (user.profilePictureUrl != null)?ExtendedImage.network(user.profilePictureUrl!, cacheKey: cacheKey, cache: true).image:null,
+                  backgroundImage: (user.profilePictureUrl != null)
+                      ? ExtendedImage.network(
+                          user.profilePictureUrl!,
+                          cacheKey: cacheKey,
+                          cache: true,
+                        ).image
+                      : null,
                   child: user.profilePictureUrl == null
-                      ? Icon(Icons.person, size: 48, color: Theme.of(context).iconTheme.color)
+                      ? Icon(
+                          Icons.person,
+                          size: 48,
+                          color: Theme.of(context).iconTheme.color,
+                        )
                       : null,
                 ),
                 const SizedBox(height: 16),
@@ -116,10 +127,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 32),
                 ListTile(
                   onTap: () {
-                    themeProvider.toggleTheme(themeProvider.themeMode == ThemeMode.light);
+                    themeProvider.toggleTheme(
+                      themeProvider.themeMode == ThemeMode.light,
+                    );
                   },
                   leading: Icon(
-                    themeProvider.themeMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
+                    themeProvider.themeMode == ThemeMode.dark
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
                     color: Theme.of(context).iconTheme.color,
                   ),
                   title: Text(
@@ -148,7 +163,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const OrdersListScreen(showBackButton: true),
+                        builder: (context) =>
+                            const OrdersListScreen(showBackButton: true),
                       ),
                     );
                   },
@@ -184,9 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.logout,
                   text: 'Logout',
                   onTap: () async {
-                    await AuthService.signOutGoogle();
-                    await Supabase.instance.client.auth.signOut();
-                    await UserPreferences.clearUserId(); // Clear the user ID
+                    await AuthService.signOut();
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('userEmail');
                     await prefs.remove('hasSeenOnboarding');
@@ -212,7 +226,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileMenuItem(BuildContext context, {
+  Widget _buildProfileMenuItem(
+    BuildContext context, {
     required IconData icon,
     required String text,
     required VoidCallback onTap,
@@ -221,16 +236,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ListTile(
       leading: Icon(
         icon,
-        color: isLogout ? Theme.of(context).colorScheme.error : Theme.of(context).iconTheme.color,
+        color: isLogout
+            ? Theme.of(context).colorScheme.error
+            : Theme.of(context).iconTheme.color,
       ),
       title: Text(
         text,
         style: GoogleFonts.montserrat(
-          color: isLogout ? Theme.of(context).colorScheme.error : Theme.of(context).textTheme.titleMedium?.color,
+          color: isLogout
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).textTheme.titleMedium?.color,
           fontSize: 16,
         ),
       ),
-      trailing: Icon(Icons.arrow_forward_ios, color: Theme.of(context).iconTheme.color, size: 16),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        color: Theme.of(context).iconTheme.color,
+        size: 16,
+      ),
       onTap: onTap,
     );
   }

@@ -6,7 +6,6 @@ import 'package:xs_user/models.dart';
 import 'package:xs_user/track_order_screen.dart';
 import 'package:xs_user/order_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:xs_user/user_preferences.dart';
 
 class OrdersListScreen extends StatefulWidget {
   final bool showBackButton;
@@ -25,16 +24,10 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   }
 
   Future<void> _fetchOrders() async {
-    final userIdString = await UserPreferences.getUserId();
-    if (userIdString != null) {
-      final userId = int.tryParse(userIdString);
-      if (userId != null) {
-        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(userId);
-      }
-      else{
-        Provider.of<OrderProvider>((mounted)?context:context, listen: false).fetchOrders(1);
-      }
-    }
+    await Provider.of<OrderProvider>(
+      (mounted) ? context : context,
+      listen: false,
+    ).fetchOrders(force: true);
   }
 
   @override
@@ -47,9 +40,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
         }
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
           (route) => false,
         );
       },
@@ -60,7 +51,10 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
           elevation: 0,
           leading: widget.showBackButton
               ? IconButton(
-                  icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+                  icon: Icon(
+                    Icons.arrow_back_ios,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
                       context,
@@ -83,7 +77,8 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
         ),
         body: Consumer<OrderProvider>(
           builder: (context, orderProvider, child) {
-            if (orderProvider.isLoading && orderProvider.orderResponse == null) {
+            if (orderProvider.isLoading &&
+                orderProvider.orderResponse == null) {
               return const Center(child: CircularProgressIndicator());
             }
 
@@ -91,7 +86,8 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               return Center(child: Text('Error: ${orderProvider.error}'));
             }
 
-            if (orderProvider.orderResponse == null || orderProvider.orderResponse!.data.isEmpty) {
+            if (orderProvider.orderResponse == null ||
+                orderProvider.orderResponse!.data.isEmpty) {
               return const Center(child: Text('No orders found.'));
             }
 
@@ -110,20 +106,28 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   }
 
   Widget _buildOrderCard(BuildContext context, {required Order orderData}) {
-    final date = DateTime.fromMillisecondsSinceEpoch(orderData.orderedAt * 1000);
-    final formattedDate = "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+    final date = DateTime.fromMillisecondsSinceEpoch(
+      orderData.orderedAt * 1000,
+    );
+    final formattedDate =
+        "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
     var hour = date.hour;
     final ampm = hour >= 12 ? 'PM' : 'AM';
     hour = hour % 12;
     hour = hour == 0 ? 12 : hour;
-    final formattedTime = "${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $ampm";
+    final formattedTime =
+        "${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $ampm";
     final formattedDateTime = "$formattedDate - $formattedTime";
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TrackOrderScreen(orderId: orderData.orderId, order: orderData, orderedAt: formattedDateTime),
+            builder: (context) => TrackOrderScreen(
+              orderId: orderData.orderId,
+              order: orderData,
+              orderedAt: formattedDateTime,
+            ),
           ),
         );
       },
@@ -173,12 +177,16 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                                   orderData.items[index].picLink!,
                                   fit: BoxFit.contain,
                                   cache: true,
-                                  cacheKey: orderData.items[index].picEtag ?? orderData.items[index].picLink,
+                                  cacheKey:
+                                      orderData.items[index].picEtag ??
+                                      orderData.items[index].picLink,
                                 ),
                               ),
                             )
                           : CircleAvatar(
-                              child: Text(orderData.items[index].name.substring(0, 1)),
+                              child: Text(
+                                orderData.items[index].name.substring(0, 1),
+                              ),
                             ),
                     );
                   },
@@ -189,9 +197,14 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: orderData.orderStatus ? Colors.green : Colors.orange,
+                      color: orderData.orderStatus
+                          ? Colors.green
+                          : Colors.orange,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(

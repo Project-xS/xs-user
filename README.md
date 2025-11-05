@@ -3,22 +3,21 @@
 A new Flutter project.
 
 ### Prerequisites
-- Supabase project URL and anon key
-- Google OAuth 2.0 Web Client ID (from GCP Console)
-- Platform config for `google_sign_in` (Info.plist on iOS, Gradle config on Android)
+- Firebase project configured for Android (google-services.json) and iOS (GoogleService-Info.plist).
+- Google OAuth 2.0 Web Client ID (used for Google Sign-In on mobile).
+- Optional: comma-separated list of allowed Google domains.
 
 ### Environment
 Create a `.env` file at the project root based on `.env.example`:
 
 ```
-SUPABASE_URL=...
-SUPABASE_PUBLISHABLE_KEY=...
-SERVER_CLIENT_ID=YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com
+SERVER_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com
+ALLOWED_GOOGLE_DOMAINS=example.edu,example.com
 ```
 
 Notes:
-- `SUPABASE_PUBLISHABLE_KEY` is the new public key (replaces legacy anon key). Keep using it in clients.
-- `SERVER_CLIENT_ID` must be the Web Client ID, not iOS/Android IDs.
+- `SERVER_CLIENT_ID` should point to the Web Client ID created alongside your Firebase project.
+- `ALLOWED_GOOGLE_DOMAINS` is optional; leave blank to allow any verified Google account.
 
 ## Getting Started
 

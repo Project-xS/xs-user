@@ -44,7 +44,16 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  void addItem(String productId, String name, double price, int canteenId, String? pic, String? etag, bool isVeg, int stock) {
+  void addItem(
+    String productId,
+    String name,
+    double price,
+    int canteenId,
+    String? pic,
+    String? etag,
+    bool isVeg,
+    int stock,
+  ) {
     if (_canteenId != null && _canteenId != canteenId) {
       clear();
     }
@@ -55,7 +64,7 @@ class CartProvider with ChangeNotifier {
         SnackBar(content: Text('You can only add up to 20 of each item.'));
         return;
       }
-      if(stock != -1 && _items[productId]!.quantity >= stock){
+      if (stock != -1 && _items[productId]!.quantity >= stock) {
         SnackBar(content: Text('Can\'t add more items, stock limit reached.'));
         return;
       }

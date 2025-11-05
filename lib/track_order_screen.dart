@@ -11,7 +11,10 @@ class TrackOrderScreen extends StatefulWidget {
   final String? orderedAt;
 
   const TrackOrderScreen({super.key, this.order, this.orderId, this.orderedAt})
-      : assert(order != null || orderId != null, 'Either order or orderId must be provided');
+    : assert(
+        order != null || orderId != null,
+        'Either order or orderId must be provided',
+      );
 
   @override
   State<TrackOrderScreen> createState() => _TrackOrderScreenState();
@@ -19,7 +22,7 @@ class TrackOrderScreen extends StatefulWidget {
 
 class _TrackOrderScreenState extends State<TrackOrderScreen> {
   late Future<Order> _orderFuture;
-  
+
   @override
   void initState() {
     super.initState();
@@ -40,9 +43,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
         }
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(
-            builder: (context) => const OrdersListScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const OrdersListScreen()),
           (Route<dynamic> route) => false,
         );
       },
@@ -52,13 +53,14 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Theme.of(context).iconTheme.color,
+            ),
             onPressed: () {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const HomeScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
                 (Route<dynamic> route) => false,
               );
             },
@@ -126,7 +128,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                               Text(
                                 '${item.quantity}x ${item.name}',
                                 style: GoogleFonts.montserrat(
-                                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.color,
                                   fontSize: 14,
                                 ),
                               ),
@@ -142,7 +146,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                         Text(
                           'Total Price',
                           style: GoogleFonts.montserrat(
-                            color: Theme.of(context).textTheme.titleLarge?.color,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.color,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -150,7 +156,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                         Text(
                           '₹${orderData.totalPrice.toString()}',
                           style: GoogleFonts.montserrat(
-                            color: Theme.of(context).textTheme.titleLarge?.color,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.color,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -158,9 +166,23 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                       ],
                     ),
                     const SizedBox(height: 40),
-                    _buildStatusStep(context, title: 'Order Placed', isCompleted: true),
-                    _buildStatusStep(context, title: 'Preparing', isCompleted: orderData.orderStatus, isActive: !orderData.orderStatus),
-                    _buildStatusStep(context, title: 'Delivered', isCompleted: orderData.orderStatus, isActive: orderData.orderStatus),
+                    _buildStatusStep(
+                      context,
+                      title: 'Order Placed',
+                      isCompleted: true,
+                    ),
+                    _buildStatusStep(
+                      context,
+                      title: 'Preparing',
+                      isCompleted: orderData.orderStatus,
+                      isActive: !orderData.orderStatus,
+                    ),
+                    _buildStatusStep(
+                      context,
+                      title: 'Delivered',
+                      isCompleted: orderData.orderStatus,
+                      isActive: orderData.orderStatus,
+                    ),
                   ],
                 ),
               );
@@ -173,7 +195,8 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
     );
   }
 
-  Widget _buildStatusStep(BuildContext context, {
+  Widget _buildStatusStep(
+    BuildContext context, {
     required String title,
     bool isCompleted = false,
     bool isActive = false,
@@ -186,7 +209,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
           children: [
             Icon(
               isCompleted ? Icons.check_circle : Icons.circle,
-              color: isCompleted || isActive ? const Color(0xFFFF7A3A) : Theme.of(context).textTheme.bodyMedium?.color,
+              color: isCompleted || isActive
+                  ? const Color(0xFFFF7A3A)
+                  : Theme.of(context).textTheme.bodyMedium?.color,
               size: 30,
             ),
             const SizedBox(width: 20),
@@ -194,7 +219,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
               child: Text(
                 title,
                 style: GoogleFonts.montserrat(
-                  color: isActive || isCompleted ? Theme.of(context).textTheme.titleLarge?.color : Theme.of(context).textTheme.bodyMedium?.color,
+                  color: isActive || isCompleted
+                      ? Theme.of(context).textTheme.titleLarge?.color
+                      : Theme.of(context).textTheme.bodyMedium?.color,
                   fontSize: 16,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                 ),
@@ -208,7 +235,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
             child: Container(
               width: 2,
               height: 30,
-              color: isCompleted ? const Color(0xFFFF7A3A) : Theme.of(context).textTheme.bodyMedium?.color,
+              color: isCompleted
+                  ? const Color(0xFFFF7A3A)
+                  : Theme.of(context).textTheme.bodyMedium?.color,
             ),
           ),
       ],

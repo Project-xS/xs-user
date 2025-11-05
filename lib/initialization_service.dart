@@ -1,12 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:xs_user/auth_service.dart';
 
 enum InitializationStatus { uninitialized, initializing, initialized, error }
 
 class InitializationService extends ChangeNotifier {
-  static final InitializationService _instance = InitializationService._internal();
+  static final InitializationService _instance =
+      InitializationService._internal();
   factory InitializationService() => _instance;
   InitializationService._internal();
 
@@ -14,8 +15,11 @@ class InitializationService extends ChangeNotifier {
   InitializationStatus get status => _status;
 
   bool get isInitialized => _status == InitializationStatus.initialized;
+  List<String> get allowedDomains => _allowedDomains;
 
-  Future<void> initializeSupabaseAndGoogle() async {
+  List<String> _allowedDomains = const [];
+
+  Future<void> initializeFirebaseAndGoogle() async {
     if (_status != InitializationStatus.uninitialized) return;
 
     _status = InitializationStatus.initializing;
@@ -23,31 +27,21 @@ class InitializationService extends ChangeNotifier {
 
     try {
       await dotenv.load(fileName: ".env");
-      final supabaseUrl = dotenv.env['SUPABASE_URL'];
-      final publishableKey = dotenv.env['SUPABASE_PUBLISHABLE_KEY'] ?? dotenv.env['SUPABASE_ANON_KEY'];
-
-      if (supabaseUrl == null || publishableKey == null) {
-        throw Exception('Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY in .env');
-      }
-
-      await Supabase.initialize(
-        url: supabaseUrl,
-        // Supabase Flutter still names this parameter `anonKey`. Provide your
-        // new Publishable Key here.
-        anonKey: publishableKey,
+      _allowedDomains = _parseAllowedDomains(
+        dotenv.env['ALLOWED_GOOGLE_DOMAINS'],
       );
+
+      await Firebase.initializeApp();
 
       final serverClientId = dotenv.env['SERVER_CLIENT_ID'];
-      if (serverClientId == null || serverClientId.isEmpty) {
-        throw Exception('Missing SERVER_CLIENT_ID in .env (Google Web Client ID)');
+      if (serverClientId != null && serverClientId.isEmpty) {
+        throw Exception('SERVER_CLIENT_ID provided but empty in .env');
       }
-      await GoogleSignIn.instance.initialize(
+
+      await AuthService.configure(
         serverClientId: serverClientId,
-        hostedDomain: 'citchennai.net',
+        allowedGoogleDomains: _allowedDomains,
       );
-      // await GoogleSignIn.instance.initialize(
-      //   serverClientId: dotenv.env['SERVER_CLIENT_ID'],
-      // );
 
       _status = InitializationStatus.initialized;
     } catch (e) {
@@ -56,5 +50,15 @@ class InitializationService extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  List<String> _parseAllowedDomains(String? domains) {
+    if (domains == null || domains.trim().isEmpty) return const [];
+    final parsed = domains
+        .split(',')
+        .map((domain) => domain.trim().toLowerCase())
+        .where((domain) => domain.isNotEmpty)
+        .toList();
+    return List.unmodifiable(parsed);
   }
 }

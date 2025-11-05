@@ -5,10 +5,7 @@ class StatusResponse {
   StatusResponse({required this.status, this.error});
 
   factory StatusResponse.fromJson(Map<String, dynamic> json) {
-    return StatusResponse(
-      status: json['status'],
-      error: json['error'],
-    );
+    return StatusResponse(status: json['status'], error: json['error']);
   }
 }
 
@@ -64,7 +61,9 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     var itemsList = json['items'] as List;
-    List<OrderItem> items = itemsList.map((i) => OrderItem.fromJson(i)).toList();
+    List<OrderItem> items = itemsList
+        .map((i) => OrderItem.fromJson(i))
+        .toList();
 
     return Order(
       orderId: json['order_id'],
@@ -81,11 +80,7 @@ class OrderResponse {
   final String? error;
   final String status;
 
-  OrderResponse({
-    required this.data,
-    this.error,
-    required this.status,
-  });
+  OrderResponse({required this.data, this.error, required this.status});
 
   factory OrderResponse.fromJson(Map<String, dynamic> json) {
     List<Order> orders = [];
@@ -95,7 +90,7 @@ class OrderResponse {
     } else if (json['data'] is Map<String, dynamic>) {
       orders = [Order.fromJson(json['data'])];
     }
-    orders.sort((a,b) => b.orderId.compareTo(a.orderId));
+    orders.sort((a, b) => b.orderId.compareTo(a.orderId));
 
     return OrderResponse(
       data: orders,
@@ -112,11 +107,7 @@ class NewUser {
 
   NewUser({required this.rfid, required this.name, required this.email});
 
-  Map<String, dynamic> toJson() => {
-    'rfid': rfid,
-    'name': name,
-    'email': email,
-  };
+  Map<String, dynamic> toJson() => {'rfid': rfid, 'name': name, 'email': email};
 }
 
 class LoginRequest {
@@ -124,23 +115,26 @@ class LoginRequest {
 
   LoginRequest({required this.email});
 
-  Map<String, dynamic> toJson() => {
-    'email': email,
-  };
+  Map<String, dynamic> toJson() => {'email': email};
 }
 
 class NewOrder {
-  final int userId;
   final List<int> itemIds;
-  final String deliverAt;
+  final String? deliverAt;
+  final int userIdPlaceholder;
 
-  NewOrder({required this.userId, required this.itemIds, required this.deliverAt});
+  NewOrder({required this.itemIds, this.deliverAt, this.userIdPlaceholder = 0});
 
-  Map<String, dynamic> toJson() => {
-    'user_id': userId,
-    'item_ids': itemIds,
-    'deliver_at': deliverAt,
-  };
+  Map<String, dynamic> toJson() {
+    final payload = <String, dynamic>{
+      'user_id': userIdPlaceholder,
+      'item_ids': itemIds,
+    };
+    if (deliverAt != null) {
+      payload['deliver_at'] = deliverAt;
+    }
+    return payload;
+  }
 }
 
 class Canteen {
