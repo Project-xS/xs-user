@@ -66,10 +66,10 @@ class Order {
         .toList();
 
     return Order(
-      orderId: json['order_id'],
+      orderId: json['order_id'] ?? 0,
       orderStatus: json['order_status'] ?? false,
-      orderedAt: json['ordered_at'],
-      totalPrice: json['total_price'],
+      orderedAt: json['ordered_at'] ?? 0,
+      totalPrice: json['total_price'] ?? 0,
       items: items,
     );
   }

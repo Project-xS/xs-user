@@ -83,6 +83,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
             }
 
             if (orderProvider.error != null) {
+              debugPrint('OrderProvider Error: ${orderProvider.orderResponse}');
               return Center(child: Text('Error: ${orderProvider.error}'));
             }
 

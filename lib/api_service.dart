@@ -93,6 +93,7 @@ class ApiService {
     final response = await _get(path: '/users/get_past_orders/0');
 
     if (response.statusCode == 200 || response.statusCode == 500) {
+      debugPrint(response.body);
       return OrderResponse.fromJson(_decodeJson(response.body));
     }
 
