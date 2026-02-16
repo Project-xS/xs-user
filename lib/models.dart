@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class StatusResponse {
   final String status;
   final String? error;
@@ -81,30 +83,62 @@ class OrderItem {
 class Order {
   final int orderId;
   final bool orderStatus;
-  final int orderedAt;
+  final int orderedAtMs; // Always stored as milliseconds since epoch
   final int totalPrice;
   final List<OrderItem> items;
+  final String? deliverAt;
 
   Order({
     required this.orderId,
     required this.orderStatus,
-    required this.orderedAt,
+    required this.orderedAtMs,
     required this.totalPrice,
     required this.items,
+    this.deliverAt,
   });
 
+  /// Returns the DateTime for when this order was placed.
+  DateTime get orderedAtDateTime =>
+      DateTime.fromMillisecondsSinceEpoch(orderedAtMs);
+
   factory Order.fromJson(Map<String, dynamic> json) {
+    debugPrint('Order.fromJson raw: $json');
     final itemsList = (json['items'] as List?) ?? [];
     List<OrderItem> items = itemsList
-        .map((i) => OrderItem.fromJson(i))
+        .map((i) => OrderItem.fromJson(i as Map<String, dynamic>))
         .toList();
+
+    // Parse ordered_at: backend sends int64.
+    // Detect whether it's seconds or milliseconds:
+    //   - If > 1e12, it's likely milliseconds
+    //   - Otherwise, it's seconds and needs *1000
+    final rawOrderedAt = json['ordered_at'];
+    int orderedAtMs = 0;
+    if (rawOrderedAt is int && rawOrderedAt > 0) {
+      if (rawOrderedAt > 1e12) {
+        // Already in milliseconds
+        orderedAtMs = rawOrderedAt;
+      } else {
+        // In seconds, convert to milliseconds
+        orderedAtMs = rawOrderedAt * 1000;
+      }
+    }
+    debugPrint(
+      'Order.fromJson: orderId=${json['order_id']}, rawOrderedAt=$rawOrderedAt, orderedAtMs=$orderedAtMs, items=${items.length}',
+    );
+    for (final item in items) {
+      debugPrint(
+        '  Item: id=${item.itemId}, name="${item.name}", qty=${item.quantity}, picLink=${item.picLink}',
+      );
+    }
 
     return Order(
       orderId: json['order_id'] ?? 0,
       orderStatus: json['order_status'] ?? false,
-      orderedAt: json['ordered_at'] ?? 0,
+      orderedAtMs: orderedAtMs,
       totalPrice: json['total_price'] ?? 0,
       items: items,
+      deliverAt: json['deliver_at']?.toString(),
     );
   }
 }

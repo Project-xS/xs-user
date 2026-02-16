@@ -65,9 +65,7 @@ class UserAnalyticsScreen extends StatelessWidget {
   Map<String, double> _calculateMonthlyOrderedValue(List<Order> orders) {
     final Map<String, double> monthlyValues = {};
     for (var order in orders) {
-      final month = DateFormat(
-        'MMM',
-      ).format(DateTime.fromMillisecondsSinceEpoch(order.orderedAt * 1000));
+      final month = DateFormat('MMM').format(order.orderedAtDateTime);
       monthlyValues.update(
         month,
         (value) => value + order.totalPrice,

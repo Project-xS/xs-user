@@ -23,7 +23,6 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
   @override
   void initState() {
     super.initState();
-    _boostBrightness();
     _fetchQr();
   }
 
@@ -67,6 +66,7 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
           _qrBytes = bytes;
           _isLoading = false;
         });
+        _boostBrightness();
       }
     } on ApiException catch (e) {
       if (mounted) {
@@ -88,18 +88,21 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).iconTheme.color,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Order #${widget.orderId}',
           style: GoogleFonts.montserrat(
-            color: Colors.black87,
+            color: Theme.of(context).textTheme.titleLarge?.color,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -128,7 +131,7 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
             style: GoogleFonts.montserrat(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           const SizedBox(height: 4),
@@ -137,19 +140,20 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
               fontSize: 13,
-              color: Colors.grey[600],
+              color: Theme.of(context).textTheme.bodyMedium?.color,
             ),
           ),
           const SizedBox(height: 32),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
+              // QR code needs white background to be scannable
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey[300]!, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(20),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 4),
                 ),
@@ -163,13 +167,14 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
               filterQuality: FilterQuality.none,
             ),
           ),
-          const SizedBox(height: 24),
-          TextButton.icon(
-            onPressed: _fetchQr,
-            icon: const Icon(Icons.refresh, size: 18),
-            label: Text(
-              'Regenerate QR',
-              style: GoogleFonts.montserrat(fontSize: 14),
+          const SizedBox(height: 32),
+          Text(
+            'Keep your screen brightness high for easier scanning',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.montserrat(
+              fontSize: 12,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -188,7 +193,10 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
           Text(
             _error!,
             textAlign: TextAlign.center,
-            style: GoogleFonts.montserrat(fontSize: 16, color: Colors.black87),
+            style: GoogleFonts.montserrat(
+              fontSize: 16,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(

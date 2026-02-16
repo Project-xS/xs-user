@@ -64,7 +64,25 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (snapshot.hasData) {
             final orderData = snapshot.data!;
-            return Padding(
+            // Compute formatted date from order data if not passed
+            final String displayOrderedAt;
+            if (widget.orderedAt != null && widget.orderedAt != 'N/A') {
+              displayOrderedAt = widget.orderedAt!;
+            } else if (orderData.orderedAtMs > 0) {
+              final date = orderData.orderedAtDateTime;
+              final formattedDate =
+                  "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+              var hour = date.hour;
+              final ampm = hour >= 12 ? 'PM' : 'AM';
+              hour = hour % 12;
+              hour = hour == 0 ? 12 : hour;
+              final formattedTime =
+                  "${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $ampm";
+              displayOrderedAt = "$formattedDate - $formattedTime";
+            } else {
+              displayOrderedAt = 'N/A';
+            }
+            return SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,68 +97,163 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Ordered At: ${widget.orderedAt}',
+                    'Ordered At: $displayOrderedAt',
                     style: GoogleFonts.montserrat(
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                       fontSize: 14,
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Order Summary',
-                    style: GoogleFonts.montserrat(
-                      color: Theme.of(context).textTheme.titleLarge?.color,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  if (orderData.deliverAt != null &&
+                      orderData.deliverAt!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          size: 16,
+                          color: const Color(0xFFFF7A3A),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Delivery: ${orderData.deliverAt}',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFFFF7A3A),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: orderData.items.length,
-                    itemBuilder: (context, index) {
-                      final item = orderData.items[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Row(
+                  ],
+                  const SizedBox(height: 24),
+                  // Order Summary Card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Order Summary',
+                          style: GoogleFonts.montserrat(
+                            color: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.color,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...orderData.items.map((item) {
+                          final displayName = item.name.isNotEmpty
+                              ? item.name
+                              : 'Item #${item.itemId}';
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                            child: Row(
+                              children: [
+                                // Quantity badge
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFFF7A3A,
+                                    ).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '${item.quantity}×',
+                                    style: GoogleFonts.montserrat(
+                                      color: const Color(0xFFFF7A3A),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Veg/Non-veg indicator
+                                Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: item.isVeg
+                                          ? Colors.green
+                                          : Colors.red,
+                                      width: 1.5,
+                                    ),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                  child: Center(
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: BoxDecoration(
+                                        color: item.isVeg
+                                            ? Colors.green
+                                            : Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Item name
+                                Expanded(
+                                  child: Text(
+                                    displayName,
+                                    style: GoogleFonts.montserrat(
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium?.color,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 8),
+                        Divider(
+                          color: Theme.of(
+                            context,
+                          ).dividerColor.withValues(alpha: 0.3),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '${item.quantity}x ${item.name}',
+                              'Total',
                               style: GoogleFonts.montserrat(
                                 color: Theme.of(
                                   context,
-                                ).textTheme.bodyMedium?.color,
-                                fontSize: 14,
+                                ).textTheme.titleLarge?.color,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '₹${orderData.totalPrice}',
+                              style: GoogleFonts.montserrat(
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.titleLarge?.color,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total Price',
-                        style: GoogleFonts.montserrat(
-                          color: Theme.of(context).textTheme.titleLarge?.color,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '₹${orderData.totalPrice.toString()}',
-                        style: GoogleFonts.montserrat(
-                          color: Theme.of(context).textTheme.titleLarge?.color,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 40),
                   _buildStatusStep(

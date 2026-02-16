@@ -1,4 +1,3 @@
-import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:xs_user/models.dart';
@@ -84,18 +83,21 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   }
 
   Widget _buildOrderCard(BuildContext context, {required Order orderData}) {
-    final date = DateTime.fromMillisecondsSinceEpoch(
-      orderData.orderedAt * 1000,
-    );
-    final formattedDate =
-        "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
-    var hour = date.hour;
-    final ampm = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12;
-    hour = hour == 0 ? 12 : hour;
-    final formattedTime =
-        "${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $ampm";
-    final formattedDateTime = "$formattedDate - $formattedTime";
+    final String formattedDateTime;
+    if (orderData.orderedAtMs == 0) {
+      formattedDateTime = 'N/A';
+    } else {
+      final date = orderData.orderedAtDateTime;
+      final formattedDate =
+          "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+      var hour = date.hour;
+      final ampm = hour >= 12 ? 'PM' : 'AM';
+      hour = hour % 12;
+      hour = hour == 0 ? 12 : hour;
+      final formattedTime =
+          "${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $ampm";
+      formattedDateTime = "$formattedDate - $formattedTime";
+    }
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -120,62 +122,55 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     '#${orderData.orderId}',
                     style: GoogleFonts.montserrat(
                       color: Theme.of(context).textTheme.titleLarge?.color,
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    formattedDateTime,
-                    style: GoogleFonts.montserrat(
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        formattedDateTime,
+                        style: GoogleFonts.montserrat(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (orderData.deliverAt != null &&
+                          orderData.deliverAt!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.schedule,
+                              size: 12,
+                              color: const Color(0xFFFF7A3A),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              orderData.deliverAt!,
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFFFF7A3A),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: orderData.items.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: (orderData.items[index].picLink != null)
-                          ? CircleAvatar(
-                              child: ClipOval(
-                                child: ExtendedImage.network(
-                                  orderData.items[index].picLink!,
-                                  fit: BoxFit.contain,
-                                  cache: true,
-                                  cacheKey:
-                                      orderData.items[index].picEtag ??
-                                      orderData.items[index].picLink,
-                                ),
-                              ),
-                            )
-                          : CircleAvatar(
-                              child: Text(
-                                orderData.items[index].name.isNotEmpty
-                                    ? orderData.items[index].name.substring(
-                                        0,
-                                        1,
-                                      )
-                                    : '?',
-                              ),
-                            ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
