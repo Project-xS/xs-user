@@ -37,7 +37,11 @@ class CartScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/empty_cart.png', width: 250, height: 250),
+                  Image.asset(
+                    'assets/empty_cart.png',
+                    width: 250,
+                    height: 250,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Your cart is empty!',
@@ -63,7 +67,10 @@ class CartScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
                     itemCount: cart.items.length,
                     itemBuilder: (ctx, i) => _buildCartItem(
                       context: context,
@@ -72,61 +79,85 @@ class CartScreen extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildPriceRow(
-                        'Subtotal',
-                        '₹${cart.totalAmount.toStringAsFixed(2)}',
-                        context,
-                      ),
-                      const SizedBox(height: 8),
-                      Divider(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                        height: 32,
-                      ),
-                      _buildPriceRow(
-                        'Total',
-                        '₹${cart.totalAmount.toStringAsFixed(2)}',
-                        context,
-                        isTotal: true,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const CheckoutScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Proceed to Checkout',
-                          style: GoogleFonts.montserrat(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(20),
+                        blurRadius: 20,
+                        offset: const Offset(0, -5),
                       ),
                     ],
+                  ),
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total',
+                              style: GoogleFonts.montserrat(
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.color,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '₹${cart.totalAmount.toStringAsFixed(2)}',
+                              style: GoogleFonts.montserrat(
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.titleLarge?.color,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CheckoutScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            minimumSize: const Size(double.infinity, 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 4,
+                            shadowColor: Theme.of(
+                              context,
+                            ).colorScheme.primary.withAlpha(100),
+                          ),
+                          child: Text(
+                            'Proceed to Checkout',
+                            style: GoogleFonts.montserrat(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -141,23 +172,37 @@ class CartScreen extends StatelessWidget {
     final cart = Provider.of<CartProvider>(context, listen: false);
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(16),
             child: item.pic != null
                 ? ExtendedImage.network(
                     item.pic!,
                     cache: true,
                     cacheKey: item.etag,
-                    width: 80,
-                    height: 80,
+                    width: 90,
+                    height: 90,
                     fit: BoxFit.cover,
                   )
                 : Container(
-                    width: 80,
-                    height: 80,
-                    color: const Color.fromARGB(119, 158, 158, 158),
+                    width: 90,
+                    height: 90,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     child: Icon(
                       Icons.fastfood,
                       color: Theme.of(context).iconTheme.color,
@@ -169,101 +214,106 @@ class CartScreen extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   item.name,
                   style: GoogleFonts.montserrat(
-                    color: Theme.of(context).textTheme.titleMedium?.color,
-                    fontSize: 15,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '₹${(item.price * item.quantity).toStringAsFixed(2)}',
                   style: GoogleFonts.montserrat(
-                    color: Theme.of(context).textTheme.titleMedium?.color,
-                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {
-                  cart.removeSingleItem(item.id);
-                },
-                icon: Icon(
-                  Icons.remove_circle_outline,
-                  color: Theme.of(context).iconTheme.color,
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildQuantityButton(
+                  context: context,
+                  icon: Icons.remove,
+                  onTap: () => cart.removeSingleItem(item.id),
                 ),
-              ),
-              Text(
-                item.quantity.toString(),
-                style: GoogleFonts.montserrat(
-                  color: Theme.of(context).textTheme.titleMedium?.color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                SizedBox(
+                  width: 32,
+                  child: Text(
+                    item.quantity.toString(),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.montserrat(
+                      color: Theme.of(context).textTheme.titleMedium?.color,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: () {
-                  cart.addItem(
-                    item.id,
-                    item.name,
-                    item.price,
-                    cart.canteenId!,
-                    item.pic,
-                    item.etag,
-                    item.isVeg,
-                    item.stock,
-                  );
-                },
-                icon: Icon(
-                  Icons.add_circle_outline,
-                  color: Theme.of(context).colorScheme.primary,
+                _buildQuantityButton(
+                  context: context,
+                  icon: Icons.add,
+                  onTap: () {
+                    cart.addItem(
+                      item.id,
+                      item.name,
+                      item.price,
+                      cart.canteenId!,
+                      item.pic,
+                      item.etag,
+                      item.isVeg,
+                      item.stock,
+                    );
+                  },
+                  isAdd: true,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPriceRow(
-    String title,
-    String price,
-    BuildContext context, {
-    bool isTotal = false,
+  Widget _buildQuantityButton({
+    required BuildContext context,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isAdd = false,
   }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.montserrat(
-            color: isTotal
-                ? Theme.of(context).textTheme.titleLarge?.color
-                : Theme.of(context).textTheme.bodyMedium?.color,
-            fontSize: isTotal ? 18 : 14,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isAdd
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
         ),
-        Text(
-          price,
-          style: GoogleFonts.montserrat(
-            color: isTotal
-                ? Theme.of(context).textTheme.titleLarge?.color
-                : Theme.of(context).textTheme.bodyMedium?.color,
-            fontSize: isTotal ? 18 : 14,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-          ),
+        child: Icon(
+          icon,
+          size: 16,
+          color: isAdd
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).iconTheme.color,
         ),
-      ],
+      ),
     );
   }
 }
