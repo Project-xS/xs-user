@@ -18,7 +18,6 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
   Uint8List? _qrBytes;
   bool _isLoading = true;
   String? _error;
-  double? _previousBrightness;
 
   @override
   void initState() {
@@ -34,7 +33,6 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
 
   Future<void> _boostBrightness() async {
     try {
-      _previousBrightness = await ScreenBrightness().current;
       await ScreenBrightness().setScreenBrightness(1.0);
     } catch (_) {
       // Brightness control not available — continue without it
@@ -43,11 +41,9 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
 
   Future<void> _restoreBrightness() async {
     try {
-      if (_previousBrightness != null) {
-        await ScreenBrightness().setScreenBrightness(_previousBrightness!);
-      } else {
-        await ScreenBrightness().resetScreenBrightness();
-      }
+      // resetScreenBrightness releases the app-level brightness override,
+      // giving control back to the system so the user can adjust freely.
+      await ScreenBrightness().resetScreenBrightness();
     } catch (_) {
       // Ignore
     }
