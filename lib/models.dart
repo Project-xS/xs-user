@@ -114,13 +114,28 @@ class Order {
     //   - Otherwise, it's seconds and needs *1000
     final rawOrderedAt = json['ordered_at'];
     int orderedAtMs = 0;
-    if (rawOrderedAt is int && rawOrderedAt > 0) {
-      if (rawOrderedAt > 1e12) {
+    int? orderedAtValue;
+    if (rawOrderedAt is int) {
+      orderedAtValue = rawOrderedAt;
+    } else if (rawOrderedAt is double) {
+      orderedAtValue = rawOrderedAt.round();
+    } else if (rawOrderedAt is String) {
+      orderedAtValue = int.tryParse(rawOrderedAt);
+      if (orderedAtValue == null) {
+        final parsedDouble = double.tryParse(rawOrderedAt);
+        if (parsedDouble != null) {
+          orderedAtValue = parsedDouble.round();
+        }
+      }
+    }
+
+    if (orderedAtValue != null && orderedAtValue > 0) {
+      if (orderedAtValue > 1e12) {
         // Already in milliseconds
-        orderedAtMs = rawOrderedAt;
+        orderedAtMs = orderedAtValue;
       } else {
         // In seconds, convert to milliseconds
-        orderedAtMs = rawOrderedAt * 1000;
+        orderedAtMs = orderedAtValue * 1000;
       }
     }
     debugPrint(

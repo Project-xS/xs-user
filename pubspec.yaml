@@ -42,7 +42,6 @@ dependencies:
   async: ^2.13.0
   confetti: ^0.8.0
   google_sign_in: ^7.1.1
-  flutter_dotenv: ^6.0.0
   extended_image: ^10.0.1
   fl_chart: ^1.1.0
   intl: ^0.20.2
@@ -50,6 +49,7 @@ dependencies:
   firebase_auth: ^5.3.0
   flutter_secure_storage: ^9.2.2
   screen_brightness: ^1.0.1
+  flutter_dotenv: ^6.0.0
 
 dependency_overrides:
   vector_math: ^2.2.0

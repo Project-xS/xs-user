@@ -42,7 +42,6 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
       case OrderFilter.past:
         return 'Older Orders';
       case OrderFilter.all:
-      default:
         return 'My Orders';
     }
   }
@@ -96,7 +95,6 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               case OrderFilter.past:
                 return order.orderStatus; // true means completed/past
               case OrderFilter.all:
-              default:
                 return true;
             }
           }).toList();

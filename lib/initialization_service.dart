@@ -26,20 +26,29 @@ class InitializationService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await dotenv.load(fileName: ".env");
-      _allowedDomains = _parseAllowedDomains(
-        dotenv.env['ALLOWED_GOOGLE_DOMAINS'],
-      );
+      if (!dotenv.isInitialized) {
+        await dotenv.load(fileName: ".env");
+      }
+
+      const rawAllowedDomains = String.fromEnvironment('ALLOWED_GOOGLE_DOMAINS');
+      final envAllowedDomains = dotenv.env['ALLOWED_GOOGLE_DOMAINS'];
+      final allowedDomainsValue =
+          rawAllowedDomains.isNotEmpty ? rawAllowedDomains : envAllowedDomains;
+      _allowedDomains = _parseAllowedDomains(allowedDomainsValue);
 
       await Firebase.initializeApp();
 
-      final serverClientId = dotenv.env['SERVER_CLIENT_ID'];
-      if (serverClientId != null && serverClientId.isEmpty) {
-        throw Exception('SERVER_CLIENT_ID provided but empty in .env');
-      }
+      const serverClientId = String.fromEnvironment('SERVER_CLIENT_ID');
+      final envServerClientId = dotenv.env['SERVER_CLIENT_ID'];
+      final effectiveServerClientId =
+          serverClientId.isNotEmpty ? serverClientId : envServerClientId;
 
       await AuthService.configure(
-        serverClientId: serverClientId,
+        serverClientId:
+            (effectiveServerClientId != null &&
+                    effectiveServerClientId.isNotEmpty)
+                ? effectiveServerClientId
+                : null,
         allowedGoogleDomains: _allowedDomains,
       );
 

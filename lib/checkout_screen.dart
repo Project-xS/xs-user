@@ -49,6 +49,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _orderError = null;
     });
 
+    int? holdId;
+
     try {
       final cart = Provider.of<CartProvider>(context, listen: false);
 
@@ -58,12 +60,55 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       final initializationService = InitializationService();
+      if (initializationService.status == InitializationStatus.uninitialized) {
+        initializationService.initializeFirebaseAndGoogle();
+      }
       if (initializationService.status != InitializationStatus.initialized) {
-        // Re-run init check if needed, or just fail safely
-        // For brevity assuming standard auth check passes or throws in ApiService
+        if (initializationService.status == InitializationStatus.initializing) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const PopScope(
+              canPop: false,
+              child: AlertDialog(
+                content: Row(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(width: 16),
+                    Text('Verifying...'),
+                  ],
+                ),
+              ),
+            ),
+          );
+
+          final completer = Completer<void>();
+          void listener() {
+            if (initializationService.status !=
+                InitializationStatus.initializing) {
+              completer.complete();
+              initializationService.removeListener(listener);
+            }
+          }
+
+          initializationService.addListener(listener);
+          if (initializationService.status != InitializationStatus.initializing) {
+            initializationService.removeListener(listener);
+            if (!completer.isCompleted) {
+              completer.complete();
+            }
+          }
+          await completer.future;
+          if (mounted) Navigator.of(context).pop();
+        }
+
+        if (initializationService.status == InitializationStatus.error) {
+          throw 'Initialization failed. Please restart the app.';
+        }
       }
 
       final isSessionValid = await AuthService.isGoogleSessionValid();
+      if (!mounted) return;
       if (!isSessionValid) throw 'Session expired. Please login again.';
 
       final canteenId = cart.canteenId;
@@ -114,14 +159,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (holdResponse.status != 'ok' || holdResponse.holdId == null) {
         throw holdResponse.error ?? 'Failed to reserve items.';
       }
+      holdId = holdResponse.holdId;
 
       // 3. Confirm Hold (Implicit Payment)
       final confirmResponse = await ApiService().confirmHold(
-        holdResponse.holdId!,
+        holdId!,
       );
 
       if (confirmResponse.status == 'ok' && confirmResponse.orderId != null) {
         cart.clear();
+        if (!mounted) return;
         Provider.of<OrderProvider>(
           context,
           listen: false,
@@ -140,6 +187,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw confirmResponse.error ?? 'Payment failed.';
       }
     } catch (e) {
+      if (holdId != null) {
+        try {
+          await ApiService().cancelHold(holdId);
+        } catch (_) {
+          // Best-effort: release hold if confirm fails.
+        }
+      }
       if (!mounted) return;
       setState(() {
         _orderError = e.toString().replaceAll('Exception:', '').trim();
@@ -184,56 +238,58 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _buildSectionCard(
               context,
               title: 'Pickup Time',
-              child: Column(
-                children: [
-                  RadioListTile(
-                    title: Text(
-                      'Instant',
-                      style: GoogleFonts.montserrat(fontSize: 14),
-                    ),
-                    value: 'instant',
-                    groupValue: _orderType,
-                    onChanged: (val) =>
-                        setState(() => _orderType = val.toString()),
-                    activeColor: Theme.of(context).colorScheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  RadioListTile(
-                    title: Text(
-                      'Preorder',
-                      style: GoogleFonts.montserrat(fontSize: 14),
-                    ),
-                    value: 'preorder',
-                    groupValue: _orderType,
-                    onChanged: (val) =>
-                        setState(() => _orderType = val.toString()),
-                    activeColor: Theme.of(context).colorScheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  if (_orderType == 'preorder')
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 16,
-                        right: 16,
-                        bottom: 8,
+              child: RadioGroup<String>(
+                groupValue: _orderType,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _orderType = value);
+                },
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: Text(
+                        'Instant',
+                        style: GoogleFonts.montserrat(fontSize: 14),
                       ),
-                      child: DropdownButton<String>(
-                        value: _selectedTimeBand,
-                        isExpanded: true,
-                        underline: Container(
-                          height: 1,
-                          color: Theme.of(context).dividerColor,
+                      value: 'instant',
+                      activeColor: Theme.of(context).colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    RadioListTile<String>(
+                      title: Text(
+                        'Preorder',
+                        style: GoogleFonts.montserrat(fontSize: 14),
+                      ),
+                      value: 'preorder',
+                      activeColor: Theme.of(context).colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    if (_orderType == 'preorder')
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          bottom: 8,
                         ),
-                        items: _timeBands
-                            .map(
-                              (e) => DropdownMenuItem(value: e, child: Text(e)),
-                            )
-                            .toList(),
-                        onChanged: (val) =>
-                            setState(() => _selectedTimeBand = val!),
+                        child: DropdownButton<String>(
+                          value: _selectedTimeBand,
+                          isExpanded: true,
+                          underline: Container(
+                            height: 1,
+                            color: Theme.of(context).dividerColor,
+                          ),
+                          items: _timeBands
+                              .map(
+                                (e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)),
+                              )
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _selectedTimeBand = val!),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),

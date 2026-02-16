@@ -8,16 +8,30 @@ A new Flutter project.
 - Optional: comma-separated list of allowed Google domains.
 
 ### Environment
-Create a `.env` file at the project root based on `.env.example`:
+Provide config via `.env` and/or `--dart-define` at build/run time.
+`--dart-define` takes precedence when both are provided.
+
+Example `.env`:
 
 ```
 SERVER_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com
 ALLOWED_GOOGLE_DOMAINS=example.edu,example.com
+API_BASE_URL=https://proj-xs.fly.dev
+```
+
+Run with `--dart-define`:
+
+```
+flutter run \
+  --dart-define=SERVER_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com \
+  --dart-define=ALLOWED_GOOGLE_DOMAINS=example.edu,example.com \
+  --dart-define=API_BASE_URL=https://proj-xs.fly.dev
 ```
 
 Notes:
 - `SERVER_CLIENT_ID` should point to the Web Client ID created alongside your Firebase project.
 - `ALLOWED_GOOGLE_DOMAINS` is optional; leave blank to allow any verified Google account.
+- `API_BASE_URL` is optional; defaults to `https://proj-xs.fly.dev`.
 
 ## Getting Started
 

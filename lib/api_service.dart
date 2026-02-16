@@ -19,8 +19,15 @@ class ApiException implements Exception {
 class ApiService {
   ApiService({http.Client? client}) : _client = client ?? http.Client();
 
-  static String get baseUrl =>
-      dotenv.env['API_BASE_URL'] ?? 'https://proj-xs.fly.dev';
+  static String get baseUrl {
+    const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+    if (apiBaseUrl.isNotEmpty) return apiBaseUrl;
+
+    final envUrl = dotenv.env['API_BASE_URL'];
+    if (envUrl != null && envUrl.isNotEmpty) return envUrl;
+
+    return 'https://proj-xs.fly.dev';
+  }
   static const _allowedDeliveryBands = {
     '11:00am - 12:00pm',
     '12:00pm - 01:00pm',
