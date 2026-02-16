@@ -1,7 +1,6 @@
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:xs_user/home_screen.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/track_order_screen.dart';
 import 'package:xs_user/order_provider.dart';
@@ -25,83 +24,61 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
 
   Future<void> _fetchOrders() async {
     await Provider.of<OrderProvider>(
-      (mounted) ? context : context,
+      context,
       listen: false,
     ).fetchOrders(force: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (bool didPop, dynamic result) {
-        if (didPop) {
-          return;
-        }
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
-        );
-      },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          elevation: 0,
-          leading: widget.showBackButton
-              ? IconButton(
-                  icon: Icon(
-                    Icons.arrow_back_ios,
-                    color: Theme.of(context).iconTheme.color,
-                  ),
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
-                      ),
-                      (route) => false,
-                    );
-                  },
-                )
-              : null,
-          title: Text(
-            'My Orders',
-            style: GoogleFonts.montserrat(
-              color: Theme.of(context).textTheme.titleLarge?.color,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        elevation: 0,
+        leading: widget.showBackButton
+            ? IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios,
+                  color: Theme.of(context).iconTheme.color,
+                ),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: Text(
+          'My Orders',
+          style: GoogleFonts.montserrat(
+            color: Theme.of(context).textTheme.titleLarge?.color,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        body: Consumer<OrderProvider>(
-          builder: (context, orderProvider, child) {
-            if (orderProvider.isLoading &&
-                orderProvider.orderResponse == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      ),
+      body: Consumer<OrderProvider>(
+        builder: (context, orderProvider, child) {
+          if (orderProvider.isLoading && orderProvider.orderResponse == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (orderProvider.error != null) {
-              debugPrint('OrderProvider Error: ${orderProvider.orderResponse}');
-              return Center(child: Text('Error: ${orderProvider.error}'));
-            }
+          if (orderProvider.error != null) {
+            debugPrint('OrderProvider Error: ${orderProvider.orderResponse}');
+            return Center(child: Text('Error: ${orderProvider.error}'));
+          }
 
-            if (orderProvider.orderResponse == null ||
-                orderProvider.orderResponse!.data.isEmpty) {
-              return const Center(child: Text('No orders found.'));
-            }
+          if (orderProvider.orderResponse == null ||
+              orderProvider.orderResponse!.data.isEmpty) {
+            return const Center(child: Text('No orders found.'));
+          }
 
-            final List<Order> orders = orderProvider.orderResponse!.data;
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              itemBuilder: (context, index) {
-                return _buildOrderCard(context, orderData: orders[index]);
-              },
-            );
-          },
-        ),
+          final List<Order> orders = orderProvider.orderResponse!.data;
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: orders.length,
+            itemBuilder: (context, index) {
+              return _buildOrderCard(context, orderData: orders[index]);
+            },
+          );
+        },
       ),
     );
   }

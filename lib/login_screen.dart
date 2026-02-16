@@ -83,9 +83,9 @@ class _LoginScreenState extends State<LoginScreen>
       debugPrint('Google sign-in error: ${e.code}');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
       }
       debugPrint('Google sign-in error: $e');
     } finally {

@@ -61,11 +61,9 @@ class CartProvider with ChangeNotifier {
 
     if (_items.containsKey(productId)) {
       if (_items[productId]!.quantity >= 20) {
-        SnackBar(content: Text('You can only add up to 20 of each item.'));
         return;
       }
       if (stock != -1 && _items[productId]!.quantity >= stock) {
-        SnackBar(content: Text('Can\'t add more items, stock limit reached.'));
         return;
       }
       _items.update(

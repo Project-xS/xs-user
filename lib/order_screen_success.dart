@@ -54,7 +54,7 @@ class OrderSuccessScreen extends StatelessWidget {
               const SizedBox(height: 48),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                       builder: (context) => TrackOrderScreen(orderId: orderId),

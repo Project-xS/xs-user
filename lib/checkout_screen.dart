@@ -157,10 +157,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
       return;
     }
-    final menuProvider = Provider.of<MenuProvider>(
-      (mounted) ? context : context,
-      listen: false,
-    );
+    final menuProvider = Provider.of<MenuProvider>(context, listen: false);
     final canteenId = cart.canteenId;
 
     if (canteenId == null) {

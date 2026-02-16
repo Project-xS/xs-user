@@ -8,18 +8,21 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // TODO: Implement notifications screen
     return Scaffold(
-      backgroundColor: const Color(0xFF061224),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF061224),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Theme.of(context).iconTheme.color,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Notifications',
           style: GoogleFonts.montserrat(
-            color: Colors.white,
+            color: Theme.of(context).textTheme.titleLarge?.color,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -28,7 +31,9 @@ class NotificationsScreen extends StatelessWidget {
       body: Center(
         child: Text(
           'No notifications yet.',
-          style: GoogleFonts.montserrat(color: Colors.white),
+          style: GoogleFonts.montserrat(
+            color: Theme.of(context).textTheme.bodyMedium?.color,
+          ),
         ),
       ),
     );

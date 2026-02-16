@@ -110,12 +110,8 @@ class UserAnalyticsScreen extends StatelessWidget {
   }
 
   int _calculateTimeSaved(List<Order> orders) {
-    final random = Random();
-    int totalTimeSaved = 0;
-    for (var i = 0; i < orders.length; i++) {
-      totalTimeSaved += 20 + random.nextInt(16);
-    }
-    return totalTimeSaved;
+    // Estimate ~25 minutes saved per order (avg queue wait time)
+    return orders.length * 25;
   }
 
   Widget _buildMonthlyValueChart(

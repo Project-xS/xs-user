@@ -79,7 +79,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (snapshot.hasData) {
             final user = snapshot.data!;
-            String cacheKey = user.name.substring(0, 1).toUpperCase();
+            String cacheKey = user.name.isNotEmpty
+                ? user.name.substring(0, 1).toUpperCase()
+                : 'U';
             if (user.profilePictureUrl != null) {
               cacheKey = user.profilePictureUrl!
                   .split('=')

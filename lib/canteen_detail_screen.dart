@@ -302,22 +302,6 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
         Expanded(
           child: Consumer<MenuProvider>(
             builder: (context, menuProvider, child) {
-              if (menuProvider.getMenuItems(widget.canteen.id).isNotEmpty) {
-                List<Item> items = _applySortToItems(
-                  menuProvider.getMenuItems(widget.canteen.id),
-                );
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return _buildMenuItem(
-                      item: item,
-                      canteenId: widget.canteen.id,
-                    );
-                  },
-                );
-              }
               if (menuProvider.isLoading(widget.canteen.id) &&
                   menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
                 return const Center(child: CircularProgressIndicator());
@@ -330,9 +314,8 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
               List<Item> items = _applySortToItems(
                 menuProvider.getMenuItems(widget.canteen.id),
               );
-
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final item = items[index];

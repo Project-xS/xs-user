@@ -67,10 +67,10 @@ class OrderItem {
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
       canteenId: json['canteen_id'],
-      description: json['description'],
+      description: json['description'] ?? '',
       isVeg: json['is_veg'],
       itemId: json['item_id'],
-      name: json['name'],
+      name: json['name'] ?? '',
       picEtag: json['pic_etag'],
       picLink: json['pic_link'],
       quantity: json['quantity'],
@@ -94,7 +94,7 @@ class Order {
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
-    var itemsList = json['items'] as List;
+    final itemsList = (json['items'] as List?) ?? [];
     List<OrderItem> items = itemsList
         .map((i) => OrderItem.fromJson(i))
         .toList();

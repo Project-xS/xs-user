@@ -5,7 +5,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/models.dart';
-import 'dart:developer';
 
 class ApiException implements Exception {
   final int statusCode;
@@ -143,7 +142,6 @@ class ApiService {
     final response = await _get(path: '/users/get_past_orders/0');
 
     if (response.statusCode == 200 || response.statusCode == 500) {
-      debugPrint(response.body);
       return OrderResponse.fromJson(_decodeJson(response.body));
     }
 
@@ -248,9 +246,6 @@ class ApiService {
       debugPrint(
         'ApiService._send: Response status ${response.statusCode} for $method $uri',
       );
-      if (response.statusCode == 401) {
-        debugPrint('ApiService._send: 401 response body: ${response.body}');
-      }
     } catch (e) {
       debugPrint('ApiService._send: Request error for $method $uri: $e');
       rethrow;
@@ -267,11 +262,6 @@ class ApiService {
       debugPrint(
         'ApiService._send: Retry response status ${response.statusCode} for $method $uri',
       );
-      if (response.statusCode == 401) {
-        debugPrint(
-          'ApiService._send: 401 retry response body: ${response.body}',
-        );
-      }
     }
 
     if (response.statusCode == 401) {
@@ -319,12 +309,8 @@ class ApiService {
     }
 
     debugPrint(
-      'ApiService._buildHeaders: Token obtained for $path (length=${token.length})',
+      'ApiService._buildHeaders: Token attached (len=${token.length})',
     );
-    debugPrint(
-      'ApiService._buildHeaders: Token preview: ${token.substring(0, 50)}...',
-    );
-    log('ApiService._buildHeaders: Token: $token');
 
     headers['Authorization'] = 'Bearer $token';
     debugPrint('ApiService._buildHeaders: Authorization header set');
@@ -345,10 +331,6 @@ class ApiService {
     return path.startsWith('/') ? path : '/$path';
   }
 
-  http.Response _invalidMethod(String method) {
-    throw UnimplementedError('HTTP method $method is not implemented.');
-  }
-
   Future<http.Response> _dispatch(
     String method,
     Uri uri,
@@ -364,7 +346,7 @@ class ApiService {
       case 'DELETE':
         return _client.delete(uri, headers: headers);
       default:
-        return Future.sync(() => _invalidMethod(method));
+        throw UnimplementedError('HTTP method $method is not implemented.');
     }
   }
 
