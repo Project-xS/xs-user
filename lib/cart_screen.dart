@@ -37,11 +37,7 @@ class CartScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    'assets/empty_cart.png',
-                    width: 250,
-                    height: 250,
-                  ),
+                  Image.asset('assets/empty_cart.png', width: 250, height: 250),
                   const SizedBox(height: 24),
                   Text(
                     'Your cart is empty!',

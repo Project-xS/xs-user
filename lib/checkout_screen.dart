@@ -92,8 +92,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             );
 
-        if (menuItem.id == -1)
+        if (menuItem.id == -1) {
           continue; // Skip check if item missing? Or throw?
+        }
 
         if (!menuItem.isAvailable ||
             (menuItem.stock != -1 && menuItem.stock < cartItem.quantity)) {

@@ -37,9 +37,7 @@ class AuthService {
         : null;
     _allowedDomains = allowedGoogleDomains.map((d) => d.toLowerCase()).toList();
     if (!_googleSignInInitialized) {
-      await GoogleSignIn.instance.initialize(
-        serverClientId: _serverClientId,
-      );
+      await GoogleSignIn.instance.initialize(serverClientId: _serverClientId);
       _googleSignInInitialized = true;
     }
   }
@@ -70,9 +68,7 @@ class AuthService {
         );
       }
 
-      final credential = GoogleAuthProvider.credential(
-        idToken: idToken,
-      );
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
 
       final userCredential = await _firebaseAuth.signInWithCredential(
         credential,
@@ -115,12 +111,14 @@ class AuthService {
           'Sign-in UI is unavailable on this device.',
         );
       }
-      FlutterError.presentError(FlutterErrorDetails(
-        exception: error,
-        stack: stack,
-        library: 'AuthService',
-        context: ErrorDescription('during Google sign-in'),
-      ));
+      FlutterError.presentError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stack,
+          library: 'AuthService',
+          context: ErrorDescription('during Google sign-in'),
+        ),
+      );
       throw AuthException(
         'sign-in-failed',
         'Unable to sign in with Google at this time.',
@@ -158,7 +156,9 @@ class AuthService {
           debugPrint('AuthService.getValidIdToken: Using cached token');
           return _cachedToken;
         }
-        debugPrint('AuthService.getValidIdToken: Cached token expired, refreshing');
+        debugPrint(
+          'AuthService.getValidIdToken: Cached token expired, refreshing',
+        );
       } else {
         debugPrint('AuthService.getValidIdToken: No cached token found');
       }
@@ -214,7 +214,9 @@ class AuthService {
     final expirationTime = result.expirationTime;
 
     if (token == null) {
-      debugPrint('AuthService._persistIdToken: Token is null from getIdTokenResult');
+      debugPrint(
+        'AuthService._persistIdToken: Token is null from getIdTokenResult',
+      );
       throw AuthException(
         'token-missing',
         'Unable to fetch an ID token for the user.',
@@ -227,23 +229,20 @@ class AuthService {
     _cachedToken = token;
     _cachedExpiry = expirationTime;
 
-    if (!kIsWeb) {
-      await _secureStorage.write(key: _tokenKey, value: token);
-      if (expirationTime != null) {
-        await _secureStorage.write(
-          key: _tokenExpiryKey,
-          value: expirationTime.toIso8601String(),
-        );
-      } else {
-        await _secureStorage.delete(key: _tokenExpiryKey);
-      }
+    await _secureStorage.write(key: _tokenKey, value: token);
+    if (expirationTime != null) {
+      await _secureStorage.write(
+        key: _tokenExpiryKey,
+        value: expirationTime.toIso8601String(),
+      );
+    } else {
+      await _secureStorage.delete(key: _tokenExpiryKey);
     }
     return token;
   }
 
   static Future<void> _ensureTokenLoaded() async {
     if (_cachedToken != null && _cachedExpiry != null) return;
-    if (kIsWeb) return;
 
     try {
       final token = await _secureStorage.read(key: _tokenKey);
@@ -264,13 +263,11 @@ class AuthService {
   static Future<void> _clearCachedToken() async {
     _cachedToken = null;
     _cachedExpiry = null;
-    if (!kIsWeb) {
-      try {
-        await _secureStorage.delete(key: _tokenKey);
-        await _secureStorage.delete(key: _tokenExpiryKey);
-      } catch (e) {
-        debugPrint('AuthService._clearCachedToken error: $e');
-      }
+    try {
+      await _secureStorage.delete(key: _tokenKey);
+      await _secureStorage.delete(key: _tokenExpiryKey);
+    } catch (e) {
+      debugPrint('AuthService._clearCachedToken error: $e');
     }
   }
 }
