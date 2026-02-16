@@ -59,24 +59,74 @@ class ApiService {
     throw ApiException(response.statusCode, _extractError(response));
   }
 
-  Future<StatusResponse> createOrder(
-    List<int> itemIds,
-    String? deliverAt,
-  ) async {
+  Future<HoldResponse> createHold(List<int> itemIds, String? deliverAt) async {
     final normalizedDeliverAt = _allowedDeliveryBands.contains(deliverAt)
         ? deliverAt
         : null;
 
     final response = await _post(
-      path: '/orders',
-      body: NewOrder(itemIds: itemIds, deliverAt: normalizedDeliverAt).toJson(),
+      path: '/orders/hold',
+      body: HoldRequest(
+        itemIds: itemIds,
+        deliverAt: normalizedDeliverAt,
+      ).toJson(),
     );
+
+    if (response.statusCode == 200 || response.statusCode == 409) {
+      return HoldResponse.fromJson(_decodeJson(response.body));
+    }
+
+    throw ApiException(
+      response.statusCode,
+      'Failed to reserve items. Please try again.',
+    );
+  }
+
+  Future<ConfirmResponse> confirmHold(int holdId) async {
+    final response = await _postEmpty(path: '/orders/hold/$holdId/confirm');
+
+    if (response.statusCode == 200 || response.statusCode == 409) {
+      return ConfirmResponse.fromJson(_decodeJson(response.body));
+    }
+
+    throw ApiException(
+      response.statusCode,
+      'Failed to confirm order. Please try again.',
+    );
+  }
+
+  Future<StatusResponse> cancelHold(int holdId) async {
+    final response = await _delete(path: '/orders/hold/$holdId');
 
     if (response.statusCode == 200 || response.statusCode == 409) {
       return StatusResponse.fromJson(_decodeJson(response.body));
     }
 
-    throw ApiException(response.statusCode, _extractError(response));
+    throw ApiException(
+      response.statusCode,
+      'Failed to cancel reservation. Please try again.',
+    );
+  }
+
+  /// Fetches the QR code PNG for an order. Returns raw image bytes.
+  Future<Uint8List> getOrderQrCode(int orderId) async {
+    final response = await _get(path: '/orders/$orderId/qr');
+
+    if (response.statusCode == 200) {
+      return response.bodyBytes;
+    }
+
+    if (response.statusCode == 403) {
+      throw ApiException(403, 'You don\'t have permission to view this order.');
+    }
+    if (response.statusCode == 404) {
+      throw ApiException(404, 'Order not found or already completed.');
+    }
+
+    throw ApiException(
+      response.statusCode,
+      'Failed to generate QR code. Please try again.',
+    );
   }
 
   Future<OrderResponse> getOrdersForCurrentUser() async {
@@ -168,6 +218,14 @@ class ApiService {
     );
   }
 
+  Future<http.Response> _postEmpty({required String path}) {
+    return _send(method: 'POST', path: path, includeJsonContentType: false);
+  }
+
+  Future<http.Response> _delete({required String path}) {
+    return _send(method: 'DELETE', path: path, includeJsonContentType: false);
+  }
+
   Future<http.Response> _send({
     required String method,
     required String path,
@@ -210,7 +268,9 @@ class ApiService {
         'ApiService._send: Retry response status ${response.statusCode} for $method $uri',
       );
       if (response.statusCode == 401) {
-        debugPrint('ApiService._send: 401 retry response body: ${response.body}');
+        debugPrint(
+          'ApiService._send: 401 retry response body: ${response.body}',
+        );
       }
     }
 
@@ -261,7 +321,9 @@ class ApiService {
     debugPrint(
       'ApiService._buildHeaders: Token obtained for $path (length=${token.length})',
     );
-    debugPrint('ApiService._buildHeaders: Token preview: ${token.substring(0, 50)}...');
+    debugPrint(
+      'ApiService._buildHeaders: Token preview: ${token.substring(0, 50)}...',
+    );
     log('ApiService._buildHeaders: Token: $token');
 
     headers['Authorization'] = 'Bearer $token';
@@ -299,6 +361,8 @@ class ApiService {
       case 'POST':
         final body = jsonBody != null ? jsonEncode(jsonBody) : null;
         return _client.post(uri, headers: headers, body: body);
+      case 'DELETE':
+        return _client.delete(uri, headers: headers);
       default:
         return Future.sync(() => _invalidMethod(method));
     }

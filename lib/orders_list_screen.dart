@@ -186,7 +186,12 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                             )
                           : CircleAvatar(
                               child: Text(
-                                orderData.items[index].name.substring(0, 1),
+                                orderData.items[index].name.isNotEmpty
+                                    ? orderData.items[index].name.substring(
+                                        0,
+                                        1,
+                                      )
+                                    : '?',
                               ),
                             ),
                     );

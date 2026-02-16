@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:xs_user/home_screen.dart';
+import 'package:xs_user/qr_display_screen.dart';
 import 'package:xs_user/track_order_screen.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
@@ -75,6 +76,37 @@ class OrderSuccessScreen extends StatelessWidget {
                   style: GoogleFonts.montserrat(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QrDisplayScreen(orderId: orderId),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.qr_code_2),
+                label: Text(
+                  'Show QR Code',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFFFF7A3A),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0xFFFF7A3A)),
                   ),
                 ),
               ),

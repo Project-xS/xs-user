@@ -9,6 +9,40 @@ class StatusResponse {
   }
 }
 
+class HoldResponse {
+  final String status;
+  final int? holdId;
+  final int? expiresAt;
+  final String? error;
+
+  HoldResponse({required this.status, this.holdId, this.expiresAt, this.error});
+
+  factory HoldResponse.fromJson(Map<String, dynamic> json) {
+    return HoldResponse(
+      status: json['status'],
+      holdId: json['hold_id'],
+      expiresAt: json['expires_at'],
+      error: json['error'],
+    );
+  }
+}
+
+class ConfirmResponse {
+  final String status;
+  final int? orderId;
+  final String? error;
+
+  ConfirmResponse({required this.status, this.orderId, this.error});
+
+  factory ConfirmResponse.fromJson(Map<String, dynamic> json) {
+    return ConfirmResponse(
+      status: json['status'],
+      orderId: json['order_id'],
+      error: json['error'],
+    );
+  }
+}
+
 class OrderItem {
   final int canteenId;
   final String description;
@@ -118,18 +152,14 @@ class LoginRequest {
   Map<String, dynamic> toJson() => {'email': email};
 }
 
-class NewOrder {
+class HoldRequest {
   final List<int> itemIds;
   final String? deliverAt;
-  final int userIdPlaceholder;
 
-  NewOrder({required this.itemIds, this.deliverAt, this.userIdPlaceholder = 0});
+  HoldRequest({required this.itemIds, this.deliverAt});
 
   Map<String, dynamic> toJson() {
-    final payload = <String, dynamic>{
-      'user_id': userIdPlaceholder,
-      'item_ids': itemIds,
-    };
+    final payload = <String, dynamic>{'item_ids': itemIds};
     if (deliverAt != null) {
       payload['deliver_at'] = deliverAt;
     }

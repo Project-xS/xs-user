@@ -4,6 +4,7 @@ import 'package:xs_user/api_service.dart';
 import 'package:xs_user/home_screen.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/orders_list_screen.dart';
+import 'package:xs_user/qr_display_screen.dart';
 
 class TrackOrderScreen extends StatefulWidget {
   final Order? order;
@@ -183,6 +184,39 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                       isCompleted: orderData.orderStatus,
                       isActive: orderData.orderStatus,
                     ),
+                    if (!orderData.orderStatus) ...[
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    QrDisplayScreen(orderId: orderData.orderId),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.qr_code_2),
+                          label: Text(
+                            'Show QR Code',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF7A3A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               );
