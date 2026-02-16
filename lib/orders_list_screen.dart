@@ -5,10 +5,17 @@ import 'package:xs_user/track_order_screen.dart';
 import 'package:xs_user/order_provider.dart';
 import 'package:provider/provider.dart';
 
+enum OrderFilter { active, past, all }
+
 class OrdersListScreen extends StatefulWidget {
   final bool showBackButton;
+  final OrderFilter filter;
 
-  const OrdersListScreen({super.key, this.showBackButton = false});
+  const OrdersListScreen({
+    super.key,
+    this.showBackButton = false,
+    this.filter = OrderFilter.all,
+  });
 
   @override
   State<OrdersListScreen> createState() => _OrdersListScreenState();
@@ -28,6 +35,18 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     ).fetchOrders(force: true);
   }
 
+  String get _appBarTitle {
+    switch (widget.filter) {
+      case OrderFilter.active:
+        return 'Active Orders';
+      case OrderFilter.past:
+        return 'Older Orders';
+      case OrderFilter.all:
+      default:
+        return 'My Orders';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,7 +64,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               )
             : null,
         title: Text(
-          'My Orders',
+          _appBarTitle,
           style: GoogleFonts.montserrat(
             color: Theme.of(context).textTheme.titleLarge?.color,
             fontSize: 18,
@@ -69,12 +88,39 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
             return const Center(child: Text('No orders found.'));
           }
 
-          final List<Order> orders = orderProvider.orderResponse!.data;
+          final List<Order> allOrders = orderProvider.orderResponse!.data;
+          final List<Order> displayedOrders = allOrders.where((order) {
+            switch (widget.filter) {
+              case OrderFilter.active:
+                return !order.orderStatus; // false means pending/active
+              case OrderFilter.past:
+                return order.orderStatus; // true means completed/past
+              case OrderFilter.all:
+              default:
+                return true;
+            }
+          }).toList();
+
+          if (displayedOrders.isEmpty) {
+            return Center(
+              child: Text(
+                widget.filter == OrderFilter.active
+                    ? 'No active orders.'
+                    : widget.filter == OrderFilter.past
+                    ? 'No previous orders.'
+                    : 'No orders found.',
+              ),
+            );
+          }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: orders.length,
+            itemCount: displayedOrders.length,
             itemBuilder: (context, index) {
-              return _buildOrderCard(context, orderData: orders[index]);
+              return _buildOrderCard(
+                context,
+                orderData: displayedOrders[index],
+              );
             },
           );
         },

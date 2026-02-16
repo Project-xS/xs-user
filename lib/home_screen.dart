@@ -16,7 +16,7 @@ import 'package:xs_user/models.dart';
 import 'package:xs_user/notifications_screen.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/profile_screen.dart';
-import 'package:badges/badges.dart' as badges;
+
 import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/order_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,7 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreenBody(),
-    OrdersListScreen(),
+    OrdersListScreen(filter: OrderFilter.active),
+    CartScreen(),
     ProfileScreen(),
   ];
 
@@ -172,6 +173,10 @@ class _HomeScreenState extends State<HomeScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long),
               label: 'Orders',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart_outlined),
+              label: 'Cart',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
@@ -449,28 +454,6 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
               icon: Icon(
                 Icons.notifications_none_outlined,
                 color: Theme.of(context).iconTheme.color,
-              ),
-            ),
-            Consumer<CartProvider>(
-              builder: (_, cart, ch) => badges.Badge(
-                badgeContent: Text(
-                  cart.itemCount.toString(),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                position: badges.BadgePosition.topEnd(top: 0, end: 3),
-                child: ch,
-              ),
-              child: IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CartScreen()),
-                  );
-                },
-                icon: Icon(
-                  Icons.shopping_cart_outlined,
-                  color: Theme.of(context).iconTheme.color,
-                ),
               ),
             ),
             SizedBox(width: 7),

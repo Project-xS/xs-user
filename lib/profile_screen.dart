@@ -159,14 +159,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // const SizedBox(height: 16),
                 _buildProfileMenuItem(
                   context,
-                  icon: Icons.receipt_long,
-                  text: 'My Orders',
+                  icon: Icons.history,
+                  text: 'Older Orders',
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const OrdersListScreen(showBackButton: true),
+                        builder: (context) => const OrdersListScreen(
+                          showBackButton: true,
+                          filter: OrderFilter.past,
+                        ),
                       ),
                     );
                   },

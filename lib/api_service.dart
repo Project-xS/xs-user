@@ -139,7 +139,7 @@ class ApiService {
   }
 
   Future<OrderResponse> getPastOrders() async {
-    final response = await _get(path: '/users/get_past_orders/0');
+    final response = await _get(path: '/users/get_past_orders');
 
     if (response.statusCode == 200 || response.statusCode == 500) {
       return OrderResponse.fromJson(_decodeJson(response.body));
