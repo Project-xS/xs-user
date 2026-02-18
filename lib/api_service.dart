@@ -28,6 +28,7 @@ class ApiService {
 
     return 'https://proj-xs.fly.dev';
   }
+
   static const _allowedDeliveryBands = {
     '11:00am - 12:00pm',
     '12:00pm - 01:00pm',
@@ -202,6 +203,20 @@ class ApiService {
       final List<dynamic>? itemsJson = responseData['data'] as List<dynamic>?;
       if (itemsJson == null) return const [];
       return itemsJson.map((json) => Item.fromJson(json)).toList();
+    }
+
+    throw ApiException(response.statusCode, _extractError(response));
+  }
+
+  Future<Order> scanOrderQr(String token) async {
+    final response = await _post(path: '/orders/scan', body: {'token': token});
+
+    if (response.statusCode == 200) {
+      final orderResponse = OrderResponse.fromJson(_decodeJson(response.body));
+      if (orderResponse.data.isNotEmpty) {
+        return orderResponse.data.first;
+      }
+      throw ApiException(404, 'No order found for this QR code.');
     }
 
     throw ApiException(response.statusCode, _extractError(response));

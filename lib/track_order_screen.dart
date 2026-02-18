@@ -150,7 +150,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                         ...orderData.items.map((item) {
                           final displayName = item.name.isNotEmpty
                               ? item.name
-                              : 'Item #${item.itemId}';
+                              : 'Item';
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6.0),
                             child: Row(

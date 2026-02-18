@@ -46,36 +46,33 @@ class ConfirmResponse {
 }
 
 class OrderItem {
-  final int canteenId;
   final String description;
   final bool isVeg;
-  final int itemId;
   final String name;
   final String? picEtag;
   final String? picLink;
   final int quantity;
+  final int price;
 
   OrderItem({
-    required this.canteenId,
     required this.description,
     required this.isVeg,
-    required this.itemId,
     required this.name,
     this.picEtag,
     this.picLink,
     required this.quantity,
+    required this.price,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
-      canteenId: json['canteen_id'],
       description: json['description'] ?? '',
-      isVeg: json['is_veg'],
-      itemId: json['item_id'],
+      isVeg: json['is_veg'] ?? false,
       name: json['name'] ?? '',
       picEtag: json['pic_etag'],
       picLink: json['pic_link'],
-      quantity: json['quantity'],
+      quantity: json['quantity'] ?? 0,
+      price: json['price'] ?? 0,
     );
   }
 }
@@ -87,6 +84,7 @@ class Order {
   final int totalPrice;
   final List<OrderItem> items;
   final String? deliverAt;
+  final String canteenName;
 
   Order({
     required this.orderId,
@@ -95,6 +93,7 @@ class Order {
     required this.totalPrice,
     required this.items,
     this.deliverAt,
+    required this.canteenName,
   });
 
   /// Returns the DateTime for when this order was placed.
@@ -141,19 +140,16 @@ class Order {
     debugPrint(
       'Order.fromJson: orderId=${json['order_id']}, rawOrderedAt=$rawOrderedAt, orderedAtMs=$orderedAtMs, items=${items.length}',
     );
-    for (final item in items) {
-      debugPrint(
-        '  Item: id=${item.itemId}, name="${item.name}", qty=${item.quantity}, picLink=${item.picLink}',
-      );
-    }
 
     return Order(
       orderId: json['order_id'] ?? 0,
-      orderStatus: json['order_status'] ?? false,
+      orderStatus:
+          json['order_status'] ?? false, // Default to false (active) if missing
       orderedAtMs: orderedAtMs,
       totalPrice: json['total_price'] ?? 0,
       items: items,
       deliverAt: json['deliver_at']?.toString(),
+      canteenName: json['canteen_name'] ?? 'Unknown Canteen',
     );
   }
 }

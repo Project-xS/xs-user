@@ -166,7 +166,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
                     '#${orderData.orderId}',
@@ -176,42 +176,49 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        formattedDateTime,
-                        style: GoogleFonts.montserrat(
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  Text(
+                    formattedDateTime,
+                    style: GoogleFonts.montserrat(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    orderData.canteenName,
+                    style: GoogleFonts.montserrat(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (orderData.deliverAt != null &&
+                      orderData.deliverAt!.isNotEmpty)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          size: 12,
+                          color: const Color(0xFFFF7A3A),
                         ),
-                      ),
-                      if (orderData.deliverAt != null &&
-                          orderData.deliverAt!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.schedule,
-                              size: 12,
-                              color: const Color(0xFFFF7A3A),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              orderData.deliverAt!,
-                              style: GoogleFonts.montserrat(
-                                color: const Color(0xFFFF7A3A),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 4),
+                        Text(
+                          orderData.deliverAt!,
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFFFF7A3A),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
-                    ],
-                  ),
+                    ),
                 ],
               ),
               const SizedBox(height: 24),
