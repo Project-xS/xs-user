@@ -134,289 +134,261 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Hero(
-            tag: 'canteen_image_${widget.canteen.id}',
-            child: SizedBox(
-              height: 220,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  (widget.canteen.pic != null)
-                      ? ExtendedImage.network(
-                          widget.canteen.pic!,
-                          cache: true,
-                          cacheKey: widget.canteen.etag,
-                          clearMemoryCacheIfFailed: false,
-                          fit: BoxFit.cover,
-                        )
-                      : Center(child: Icon(Icons.store)),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withAlpha((255 * 0.7).round()),
+      body: DefaultTabController(
+        length: 3,
+        child: RefreshIndicator(
+          onRefresh: () => Provider.of<MenuProvider>(
+            context,
+            listen: false,
+          ).fetchMenuItems(widget.canteen.id, force: true),
+          notificationPredicate: (notification) => true,
+          child: NestedScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Hero(
+                    tag: 'canteen_image_${widget.canteen.id}',
+                    transitionOnUserGestures: true,
+                    child: SizedBox(
+                      height: 220,
+                      width: double.infinity,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          (widget.canteen.pic != null)
+                              ? ExtendedImage.network(
+                                  widget.canteen.pic!,
+                                  cache: true,
+                                  cacheKey: widget.canteen.etag,
+                                  clearMemoryCacheIfFailed: false,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Center(child: Icon(Icons.store)),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withAlpha(
+                                    (255 * 0.7).round(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.canteen.name,
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  widget.canteen.location,
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white.withAlpha(
+                                      (255 * 0.9).round(),
+                                    ),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.star,
+                                      color: Color(0xFFFFCB44),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      widget.canteen.rating.toString(),
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: widget.canteen.isOpen
+                                            ? const Color(0xFF1BB05A)
+                                            : Colors.red.withAlpha(200),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        widget.canteen.isOpen
+                                            ? 'Open'
+                                            : 'Closed',
+                                        style: GoogleFonts.montserrat(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      widget.canteen.hoursLabel,
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.white.withAlpha(
+                                          (255 * 0.9).round(),
+                                        ),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.canteen.name,
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.canteen.location,
-                          style: GoogleFonts.montserrat(
-                            color: Colors.white.withAlpha((255 * 0.9).round()),
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Color(0xFFFFCB44),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.canteen.rating.toString(),
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: widget.canteen.isOpen
-                                    ? const Color(0xFF1BB05A)
-                                    : Colors.red.withAlpha(200),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                widget.canteen.isOpen ? 'Open' : 'Closed',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              widget.canteen.hoursLabel,
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white.withAlpha(
-                                  (255 * 0.9).round(),
-                                ),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _TabBarDelegate(
+                    backgroundColor:
+                        Theme.of(context).scaffoldBackgroundColor,
+                    tabBar: TabBar(
+                      labelColor: const Color(0xFFFF7A3A),
+                      unselectedLabelColor: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.color,
+                      indicatorColor: const Color(0xFFFF7A3A),
+                      tabs: const [
+                        Tab(text: 'Menu'),
+                        Tab(text: 'Reviews'),
+                        Tab(text: 'Info'),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              children: [
+                _buildMenuTab(context),
+                _buildReviewsTab(context),
+                _buildInfoTab(context),
+              ],
             ),
           ),
-          Expanded(
-            child: DefaultTabController(
-              length: 3,
-              child: Column(
-                children: [
-                  TabBar(
-                    labelColor: const Color(0xFFFF7A3A),
-                    unselectedLabelColor: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.color,
-                    indicatorColor: const Color(0xFFFF7A3A),
-                    tabs: const [
-                      Tab(text: 'Menu'),
-                      Tab(text: 'Reviews'),
-                      Tab(text: 'Info'),
-                    ],
-                  ),
-
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _buildMenuTab(context),
-                        _buildReviewsTab(context),
-                        _buildInfoTab(context),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildMenuTab(BuildContext context) {
-    return Column(
-      children: [
-        if (!widget.canteen.isOpen)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withAlpha(30),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withAlpha(120)),
-              ),
-              child: Text(
-                'Canteen is closed',
-                style: GoogleFonts.montserrat(
-                  color: Colors.red,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              DropdownButton<SortOption>(
-                value: _currentSortOption,
-                icon: Icon(
-                  Icons.sort,
-                  color: Theme.of(context).iconTheme.color,
-                ),
-                underline: Container(),
-                focusColor: Colors.transparent,
-                onChanged: (SortOption? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _currentSortOption = newValue;
-                    });
-                  }
-                },
-                items:
-                    const <DropdownMenuItem<SortOption>>[
-                      DropdownMenuItem(
-                        value: SortOption.name,
-                        child: Text('Sort by Name'),
-                      ),
-                      DropdownMenuItem(
-                        value: SortOption.popularity,
-                        child: Text('Sort by Popularity'),
-                      ),
-                      DropdownMenuItem(
-                        value: SortOption.priceAsc,
-                        child: Text('Sort by Price (Low to High)'),
-                      ),
-                      DropdownMenuItem(
-                        value: SortOption.veg,
-                        child: Text('Sort by Vegetarian'),
-                      ),
-                      DropdownMenuItem(
-                        value: SortOption.nonVeg,
-                        child: Text('Sort by Non-Vegetarian'),
-                      ),
-                    ].map<DropdownMenuItem<SortOption>>((
-                      DropdownMenuItem<SortOption> item,
-                    ) {
-                      return DropdownMenuItem<SortOption>(
-                        value: item.value,
-                        child: Text(
-                          item.child is Text ? (item.child as Text).data! : '',
-                          style: GoogleFonts.montserrat(
-                            color: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.color,
-                            fontSize: 14,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-              ),
+    return Consumer<MenuProvider>(
+      builder: (context, menuProvider, child) {
+        final items = menuProvider.getMenuItems(widget.canteen.id);
+        final isLoading =
+            menuProvider.isLoading(widget.canteen.id) && items.isEmpty;
+
+        if (isLoading) {
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: const [
+              SizedBox(height: 200),
+              Center(child: CircularProgressIndicator()),
             ],
-          ),
-        ),
-        Expanded(
-          child: Consumer<MenuProvider>(
-            builder: (context, menuProvider, child) {
-              if (menuProvider.isLoading(widget.canteen.id) &&
-                  menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          );
+        }
 
-              if (menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
-                return const Center(child: Text('No items found.'));
-              }
+        final showClosedBanner = !widget.canteen.isOpen;
+        if (items.isEmpty) {
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(12),
+            children: [
+              if (showClosedBanner) _buildClosedBanner(),
+              _buildSortRow(context),
+              const SizedBox(height: 120),
+              const Center(child: Text('No items found.')),
+            ],
+          );
+        }
 
-              List<Item> items = _applySortToItems(
-                menuProvider.getMenuItems(widget.canteen.id),
-              );
-              return ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return _buildMenuItem(
-                    item: item,
-                    canteenId: widget.canteen.id,
-                    isCanteenOpen: widget.canteen.isOpen,
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
+        final sortedItems = _applySortToItems(items);
+        final headerCount = showClosedBanner ? 2 : 1;
+
+        return ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(12),
+          itemCount: headerCount + sortedItems.length,
+          itemBuilder: (context, index) {
+            if (showClosedBanner && index == 0) {
+              return _buildClosedBanner();
+            }
+            if ((showClosedBanner && index == 1) ||
+                (!showClosedBanner && index == 0)) {
+              return _buildSortRow(context);
+            }
+            final itemIndex = index - headerCount;
+            final item = sortedItems[itemIndex];
+            return _buildMenuItem(
+              item: item,
+              canteenId: widget.canteen.id,
+              isCanteenOpen: widget.canteen.isOpen,
+            );
+          },
+        );
+      },
     );
   }
 
   Widget _buildReviewsTab(BuildContext context) {
     return Consumer<MenuProvider>(
       builder: (context, menuProvider, child) {
-        if (menuProvider.isLoading(widget.canteen.id) &&
-            menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (menuProvider.getMenuItems(widget.canteen.id).isEmpty) {
-          return const Center(child: Text('No reviews found.'));
-        }
-
         final items = menuProvider.getMenuItems(widget.canteen.id);
+        final isLoading =
+            menuProvider.isLoading(widget.canteen.id) && items.isEmpty;
+
+        if (isLoading) {
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: const [
+              SizedBox(height: 200),
+              Center(child: CircularProgressIndicator()),
+            ],
+          );
+        }
+
+        if (items.isEmpty) {
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: const [
+              SizedBox(height: 200),
+              Center(child: Text('No reviews found.')),
+            ],
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
           itemCount: items.length,
           itemBuilder: (context, index) {
             final Item item = items[index % items.length];
@@ -502,40 +474,151 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   }
 
   Widget _buildInfoTab(BuildContext context) {
-    return Padding(
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Located at ${widget.canteen.location}',
+          style: GoogleFonts.montserrat(
+            color: Theme.of(context).textTheme.titleLarge?.color,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          widget.canteen.isOpen ? 'Status: Open' : 'Status: Closed',
+          style: GoogleFonts.montserrat(
+            color: widget.canteen.isOpen
+                ? const Color(0xFF1BB05A)
+                : Colors.red,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Hours: ${widget.canteen.hoursLabel}',
+          style: GoogleFonts.montserrat(
+            color: Theme.of(context).textTheme.bodyMedium?.color,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClosedBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.withAlpha(30),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.red.withAlpha(120)),
+        ),
+        child: Text(
+          'Canteen is closed',
+          style: GoogleFonts.montserrat(
+            color: Colors.red,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortRow(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Text(
-            'Located at ${widget.canteen.location}',
-            style: GoogleFonts.montserrat(
-              color: Theme.of(context).textTheme.titleLarge?.color,
-              fontSize: 16,
+          DropdownButton<SortOption>(
+            value: _currentSortOption,
+            icon: Icon(
+              Icons.sort,
+              color: Theme.of(context).iconTheme.color,
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            widget.canteen.isOpen ? 'Status: Open' : 'Status: Closed',
-            style: GoogleFonts.montserrat(
-              color: widget.canteen.isOpen
-                  ? const Color(0xFF1BB05A)
-                  : Colors.red,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Hours: ${widget.canteen.hoursLabel}',
-            style: GoogleFonts.montserrat(
-              color: Theme.of(context).textTheme.bodyMedium?.color,
-              fontSize: 14,
-            ),
+            underline: Container(),
+            focusColor: Colors.transparent,
+            onChanged: (SortOption? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  _currentSortOption = newValue;
+                });
+              }
+            },
+            items:
+                const <DropdownMenuItem<SortOption>>[
+                  DropdownMenuItem(
+                    value: SortOption.name,
+                    child: Text('Sort by Name'),
+                  ),
+                  DropdownMenuItem(
+                    value: SortOption.popularity,
+                    child: Text('Sort by Popularity'),
+                  ),
+                  DropdownMenuItem(
+                    value: SortOption.priceAsc,
+                    child: Text('Sort by Price (Low to High)'),
+                  ),
+                  DropdownMenuItem(
+                    value: SortOption.veg,
+                    child: Text('Sort by Vegetarian'),
+                  ),
+                  DropdownMenuItem(
+                    value: SortOption.nonVeg,
+                    child: Text('Sort by Non-Vegetarian'),
+                  ),
+                ].map<DropdownMenuItem<SortOption>>((
+                  DropdownMenuItem<SortOption> item,
+                ) {
+                  return DropdownMenuItem<SortOption>(
+                    value: item.value,
+                    child: Text(
+                      item.child is Text ? (item.child as Text).data! : '',
+                      style: GoogleFonts.montserrat(
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                        fontSize: 14,
+                      ),
+                    ),
+                  );
+                }).toList(),
           ),
         ],
       ),
     );
+  }
+}
+
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar tabBar;
+  final Color backgroundColor;
+
+  _TabBarDelegate({required this.tabBar, required this.backgroundColor});
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: backgroundColor, child: tabBar);
+  }
+
+  @override
+  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) {
+    return tabBar != oldDelegate.tabBar ||
+        backgroundColor != oldDelegate.backgroundColor;
   }
 }
 

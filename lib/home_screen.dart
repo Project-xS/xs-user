@@ -405,201 +405,215 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
     return phrases.first;
   }
 
+  Future<void> _refreshHome() async {
+    await Provider.of<CanteenProvider>(
+      context,
+      listen: false,
+    ).fetchCanteens(force: true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          expandedHeight: 75,
-          backgroundColor: Colors.transparent,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).appBarTheme.backgroundColor,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 48, 16, 5),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getGreeting(),
-                      style: GoogleFonts.montserrat(
-                        color: Theme.of(context).textTheme.titleLarge?.color,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+    return RefreshIndicator(
+      onRefresh: _refreshHome,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 75,
+            backgroundColor: Colors.transparent,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).appBarTheme.backgroundColor,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 48, 16, 5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getGreeting(),
+                        style: GoogleFonts.montserrat(
+                          color: Theme.of(context).textTheme.titleLarge?.color,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _getRandomPhrase(),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                      style: GoogleFonts.montserrat(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                        fontSize: 13,
+                      const SizedBox(height: 4),
+                      Text(
+                        _getRandomPhrase(),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                        style: GoogleFonts.montserrat(
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
+            actions: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsScreen(),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  Icons.notifications_none_outlined,
+                  color: Theme.of(context).iconTheme.color,
+                ),
+              ),
+              SizedBox(width: 7),
+            ],
           ),
-          actions: [
-            IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NotificationsScreen(),
+          SliverToBoxAdapter(
+            child: Consumer<NetworkBuffer>(
+              builder: (context, networkBuffer, child) {
+                if (networkBuffer.hasInternet && networkBuffer.queue.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Container(
+                  width: double.infinity,
+                  color: networkBuffer.hasInternet
+                      ? Colors.orange.withAlpha(200)
+                      : Colors.red.withAlpha(200),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        networkBuffer.hasInternet ? Icons.sync : Icons.wifi_off,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        networkBuffer.hasInternet
+                            ? 'Syncing ${networkBuffer.queue.length} data...'
+                            : 'You are offline.',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
-              icon: Icon(
-                Icons.notifications_none_outlined,
-                color: Theme.of(context).iconTheme.color,
-              ),
             ),
-            SizedBox(width: 7),
-          ],
-        ),
-        SliverToBoxAdapter(
-          child: Consumer<NetworkBuffer>(
-            builder: (context, networkBuffer, child) {
-              if (networkBuffer.hasInternet && networkBuffer.queue.isEmpty) {
-                return const SizedBox.shrink();
-              }
-
-              return Container(
-                width: double.infinity,
-                color: networkBuffer.hasInternet
-                    ? Colors.orange.withAlpha(200)
-                    : Colors.red.withAlpha(200),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      networkBuffer.hasInternet ? Icons.sync : Icons.wifi_off,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      networkBuffer.hasInternet
-                          ? 'Syncing ${networkBuffer.queue.length} data...'
-                          : 'You are offline.',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
           ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search for food...',
-                hintStyle: GoogleFonts.montserrat(
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                  fontSize: 14,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Theme.of(context).iconTheme.color,
-                  size: 20,
-                ),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_searchController.text.isNotEmpty)
-                      IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          color: Theme.of(context).iconTheme.color,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search for food...',
+                  hintStyle: GoogleFonts.montserrat(
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Theme.of(context).iconTheme.color,
+                    size: 20,
+                  ),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_searchController.text.isNotEmpty)
+                        IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: Theme.of(context).iconTheme.color,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchResults = null;
+                              _currentSortOption = SortOption.name;
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchResults = null;
-                            _currentSortOption = SortOption.name;
-                          });
-                        },
-                      ),
-                    Container(
-                      margin: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFFFF7A3A)
-                            : Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        onPressed: _showFilterOptions,
-                        icon: Icon(
-                          Icons.filter_list,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          size: 20,
+                      Container(
+                        margin: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFFFF7A3A)
+                              : Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          onPressed: _showFilterOptions,
+                          icon: Icon(
+                            Icons.filter_list,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            size: 20,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).cardColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                filled: true,
-                fillColor: Theme.of(context).cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
             ),
           ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _searchResults == null ? 'Campus Canteens' : 'Search Results',
-                  style: GoogleFonts.montserrat(
-                    color: Theme.of(context).textTheme.titleLarge?.color,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _searchResults == null ? 'Campus Canteens' : 'Search Results',
+                    style: GoogleFonts.montserrat(
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                if (_searchResults == null)
-                  Consumer<CanteenProvider>(
-                    builder: (context, canteenProvider, child) {
-                      if (canteenProvider.isLoading &&
-                          canteenProvider.canteens.isEmpty) {
-                        return const SizedBox();
-                      }
-                      return Text(
-                        '${canteenProvider.canteens.length} canteens available',
-                        style: GoogleFonts.montserrat(
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                          fontSize: 12,
-                        ),
-                      );
-                    },
-                  ),
-              ],
+                  if (_searchResults == null)
+                    Consumer<CanteenProvider>(
+                      builder: (context, canteenProvider, child) {
+                        if (canteenProvider.isLoading &&
+                            canteenProvider.canteens.isEmpty) {
+                          return const SizedBox();
+                        }
+                        return Text(
+                          '${canteenProvider.canteens.length} canteens available',
+                          style: GoogleFonts.montserrat(
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            fontSize: 12,
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
             ),
           ),
-        ),
-        _searchResults != null ? _buildSearchResults() : _buildCanteenList(),
-      ],
+          _searchResults != null ? _buildSearchResults() : _buildCanteenList(),
+        ],
+      ),
     );
   }
 
@@ -984,6 +998,7 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
     },
     child: Hero(
       tag: 'canteen_image_${canteen.id}',
+      transitionOnUserGestures: true,
       child: Container(
         height: 220,
         margin: const EdgeInsets.only(bottom: 16),

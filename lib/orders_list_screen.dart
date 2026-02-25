@@ -71,57 +71,86 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
           ),
         ),
       ),
-      body: Consumer<OrderProvider>(
-        builder: (context, orderProvider, child) {
-          if (orderProvider.isLoading && orderProvider.orderResponse == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (orderProvider.error != null) {
-            debugPrint('OrderProvider Error: ${orderProvider.orderResponse}');
-            return Center(child: Text('Error: ${orderProvider.error}'));
-          }
-
-          if (orderProvider.orderResponse == null ||
-              orderProvider.orderResponse!.data.isEmpty) {
-            return const Center(child: Text('No orders found.'));
-          }
-
-          final List<Order> allOrders = orderProvider.orderResponse!.data;
-          final List<Order> displayedOrders = allOrders.where((order) {
-            switch (widget.filter) {
-              case OrderFilter.active:
-                return !order.orderStatus; // false means pending/active
-              case OrderFilter.past:
-                return order.orderStatus; // true means completed/past
-              case OrderFilter.all:
-                return true;
-            }
-          }).toList();
-
-          if (displayedOrders.isEmpty) {
-            return Center(
-              child: Text(
-                widget.filter == OrderFilter.active
-                    ? 'No active orders.'
-                    : widget.filter == OrderFilter.past
-                    ? 'No previous orders.'
-                    : 'No orders found.',
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: displayedOrders.length,
-            itemBuilder: (context, index) {
-              return _buildOrderCard(
-                context,
-                orderData: displayedOrders[index],
+      body: RefreshIndicator(
+        onRefresh: _fetchOrders,
+        child: Consumer<OrderProvider>(
+          builder: (context, orderProvider, child) {
+            if (orderProvider.isLoading &&
+                orderProvider.orderResponse == null) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: CircularProgressIndicator()),
+                ],
               );
-            },
-          );
-        },
+            }
+
+            if (orderProvider.error != null) {
+              debugPrint('OrderProvider Error: ${orderProvider.orderResponse}');
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 200),
+                  Center(child: Text('Error: ${orderProvider.error}')),
+                ],
+              );
+            }
+
+            if (orderProvider.orderResponse == null ||
+                orderProvider.orderResponse!.data.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: Text('No orders found.')),
+                ],
+              );
+            }
+
+            final List<Order> allOrders = orderProvider.orderResponse!.data;
+            final List<Order> displayedOrders = allOrders.where((order) {
+              switch (widget.filter) {
+                case OrderFilter.active:
+                  return !order.orderStatus; // false means pending/active
+                case OrderFilter.past:
+                  return order.orderStatus; // true means completed/past
+                case OrderFilter.all:
+                  return true;
+              }
+            }).toList();
+
+            if (displayedOrders.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 200),
+                  Center(
+                    child: Text(
+                      widget.filter == OrderFilter.active
+                          ? 'No active orders.'
+                          : widget.filter == OrderFilter.past
+                          ? 'No previous orders.'
+                          : 'No orders found.',
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: displayedOrders.length,
+              itemBuilder: (context, index) {
+                return _buildOrderCard(
+                  context,
+                  orderData: displayedOrders[index],
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
