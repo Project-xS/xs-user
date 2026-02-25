@@ -11,6 +11,8 @@ import 'package:xs_user/models.dart';
 import 'package:xs_user/order_screen_success.dart';
 import 'dart:async';
 import 'package:xs_user/order_provider.dart';
+// import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+// import 'package:xs_user/phonepe_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -161,7 +163,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       holdId = holdResponse.holdId;
 
-      // 3. Confirm Hold (Implicit Payment)
+      // 3. PhonePe Payment (Commented out as requested)
+      /*
+      final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+      final transactionId =
+          "TXN_${holdId}_${DateTime.now().millisecondsSinceEpoch}";
+
+      final paymentResponse = await PhonePeService.startPayment(
+        transactionId: transactionId,
+        amount: cart.totalAmount,
+        userId: firebaseUser?.uid ?? 'guest',
+      );
+
+      if (paymentResponse == null || paymentResponse['status'] != 'SUCCESS') {
+        final error =
+            paymentResponse?['error'] ?? 'Payment cancelled or failed.';
+        throw error;
+      }
+      */
+
+      // 4. Confirm Hold (Implicit Payment)
       final confirmResponse = await ApiService().confirmHold(
         holdId!,
       );
@@ -238,58 +259,61 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _buildSectionCard(
               context,
               title: 'Pickup Time',
-              child: RadioGroup<String>(
-                groupValue: _orderType,
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _orderType = value);
-                },
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: Text(
-                        'Instant',
-                        style: GoogleFonts.montserrat(fontSize: 14),
-                      ),
-                      value: 'instant',
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: Text(
+                      'Instant',
+                      style: GoogleFonts.montserrat(fontSize: 14),
                     ),
-                    RadioListTile<String>(
-                      title: Text(
-                        'Preorder',
-                        style: GoogleFonts.montserrat(fontSize: 14),
-                      ),
-                      value: 'preorder',
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
+                    value: 'instant',
+                    groupValue: _orderType,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _orderType = value);
+                    },
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  RadioListTile<String>(
+                    title: Text(
+                      'Preorder',
+                      style: GoogleFonts.montserrat(fontSize: 14),
                     ),
-                    if (_orderType == 'preorder')
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          bottom: 8,
-                        ),
-                        child: DropdownButton<String>(
-                          value: _selectedTimeBand,
-                          isExpanded: true,
-                          underline: Container(
-                            height: 1,
-                            color: Theme.of(context).dividerColor,
-                          ),
-                          items: _timeBands
-                              .map(
-                                (e) =>
-                                    DropdownMenuItem(value: e, child: Text(e)),
-                              )
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => _selectedTimeBand = val!),
-                        ),
+                    value: 'preorder',
+                    groupValue: _orderType,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _orderType = value);
+                    },
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  if (_orderType == 'preorder')
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: 8,
                       ),
-                  ],
-                ),
+                      child: DropdownButton<String>(
+                        value: _selectedTimeBand,
+                        isExpanded: true,
+                        underline: Container(
+                          height: 1,
+                          color: Theme.of(context).dividerColor,
+                        ),
+                        items: _timeBands
+                            .map(
+                              (e) =>
+                                  DropdownMenuItem(value: e, child: Text(e)),
+                            )
+                            .toList(),
+                        onChanged: (val) =>
+                            setState(() => _selectedTimeBand = val!),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 24),

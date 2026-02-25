@@ -151,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onChanged: (value) {
                       themeProvider.toggleTheme(value);
                     },
-                    activeThumbColor: const Color(0xFFFF6B35),
+                    activeColor: const Color(0xFFFF6B35),
                     inactiveThumbColor: Colors.grey[400],
                     inactiveTrackColor: Colors.grey[600],
                   ),

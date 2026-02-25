@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -14,6 +15,14 @@ class ApiException implements Exception {
 
   @override
   String toString() => 'ApiException($statusCode): $message';
+}
+
+class NetworkException implements Exception {
+  final String message;
+  NetworkException([this.message = 'No internet connection. Please try again.']);
+
+  @override
+  String toString() => 'NetworkException: $message';
 }
 
 class ApiService {
@@ -268,6 +277,9 @@ class ApiService {
       debugPrint(
         'ApiService._send: Response status ${response.statusCode} for $method $uri',
       );
+    } on SocketException catch (e) {
+      debugPrint('ApiService._send: Network error for $method $uri: $e');
+      throw NetworkException('No internet connection. Please try again.');
     } catch (e) {
       debugPrint('ApiService._send: Request error for $method $uri: $e');
       rethrow;

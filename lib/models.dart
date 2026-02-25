@@ -239,6 +239,27 @@ class Canteen {
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Canteen &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          location == other.location &&
+          pic == other.pic &&
+          etag == other.etag &&
+          rating == other.rating;
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      location.hashCode ^
+      pic.hashCode ^
+      etag.hashCode ^
+      rating.hashCode;
 }
 
 class Item {
@@ -280,6 +301,35 @@ class Item {
       stock: json['stock'],
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Item &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          description == other.description &&
+          price == other.price &&
+          pic == other.pic &&
+          etag == other.etag &&
+          canteenId == other.canteenId &&
+          isVeg == other.isVeg &&
+          isAvailable == other.isAvailable &&
+          stock == other.stock;
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      description.hashCode ^
+      price.hashCode ^
+      pic.hashCode ^
+      etag.hashCode ^
+      canteenId.hashCode ^
+      isVeg.hashCode ^
+      isAvailable.hashCode ^
+      stock.hashCode;
 }
 
 class User {

@@ -21,14 +21,27 @@ enum SortOption { name, popularity, priceAsc, veg, nonVeg }
 
 class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   SortOption _currentSortOption = SortOption.name;
+  late MenuProvider _menuProvider;
 
   @override
   void initState() {
     super.initState();
-    Provider.of<MenuProvider>(
-      context,
-      listen: false,
-    ).fetchMenuItems(widget.canteen.id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _menuProvider.setActiveCanteen(widget.canteen.id);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _menuProvider = Provider.of<MenuProvider>(context, listen: false);
+  }
+
+  @override
+  void dispose() {
+    // Stop auto-refresh when leaving this screen
+    _menuProvider.setActiveCanteen(null);
+    super.dispose();
   }
 
   List<Item> _applySortToItems(List<Item> items) {
@@ -136,6 +149,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                           widget.canteen.pic!,
                           cache: true,
                           cacheKey: widget.canteen.etag,
+                          clearMemoryCacheIfFailed: false,
                           fit: BoxFit.cover,
                         )
                       : Center(child: Icon(Icons.store)),
@@ -484,6 +498,7 @@ Widget _buildMenuItem({required Item item, required int canteenId}) {
                               item.pic!,
                               cacheKey: item.etag,
                               cache: true,
+                              clearMemoryCacheIfFailed: false,
                               width: 70,
                               height: 70,
                               fit: BoxFit.cover,

@@ -1,3 +1,11 @@
+// Conditional Java Home setup
+run {
+    val nixPath = "/nix/store/97694fqysmz230d822z9ykrr8wh76hd8-temurin-bin-21.0.8"
+    if (file(nixPath).exists()) {
+        System.setProperty("org.gradle.java.home", nixPath)
+    }
+}
+
 pluginManagement {
     val flutterSdkPath = run {
         val properties = java.util.Properties()

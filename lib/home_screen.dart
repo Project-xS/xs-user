@@ -13,6 +13,7 @@ import 'package:xs_user/initialization_service.dart';
 import 'package:xs_user/login_screen.dart';
 import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
+import 'package:xs_user/network_buffer.dart';
 import 'package:xs_user/notifications_screen.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/profile_screen.dart';
@@ -90,7 +91,10 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       listen: false,
     ).fetchCanteens(force: true);
-    Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+    Provider.of<OrderProvider>(
+      context,
+      listen: false,
+    ).fetchOrders(force: true);
   }
 
   void _showErrorSnackbar(String message) {
@@ -460,6 +464,44 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
           ],
         ),
         SliverToBoxAdapter(
+          child: Consumer<NetworkBuffer>(
+            builder: (context, networkBuffer, child) {
+              if (networkBuffer.hasInternet && networkBuffer.queue.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return Container(
+                width: double.infinity,
+                color: networkBuffer.hasInternet
+                    ? Colors.orange.withAlpha(200)
+                    : Colors.red.withAlpha(200),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      networkBuffer.hasInternet ? Icons.sync : Icons.wifi_off,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      networkBuffer.hasInternet
+                          ? 'Syncing ${networkBuffer.queue.length} data...'
+                          : 'You are offline.',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -687,12 +729,31 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                     color: Colors.grey.withAlpha((255 * 0.1).round()),
                     child: Stack(
                       children: [
-                        Image.asset(
-                          item.isVeg ? 'assets/veg.jpg' : 'assets/non_veg.jpg',
-                          width: 70,
-                          height: 70,
-                          fit: BoxFit.cover,
-                        ),
+                        if (item.pic != null)
+                          ExtendedImage.network(
+                            item.pic!,
+                            cache: true,
+                            cacheKey: item.etag,
+                            width: 70,
+                            height: 70,
+                            fit: BoxFit.cover,
+                            loadStateChanged: (state) {
+                              if (state.extendedImageLoadState == LoadState.failed) {
+                                return Image.asset(
+                                  item.isVeg ? 'assets/veg.jpg' : 'assets/non_veg.jpg',
+                                  fit: BoxFit.cover,
+                                );
+                              }
+                              return null;
+                            },
+                          )
+                        else
+                          Image.asset(
+                            item.isVeg ? 'assets/veg.jpg' : 'assets/non_veg.jpg',
+                            width: 70,
+                            height: 70,
+                            fit: BoxFit.cover,
+                          ),
                         if (!item.isAvailable)
                           Positioned.fill(
                             child: Container(

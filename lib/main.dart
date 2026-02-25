@@ -10,10 +10,12 @@ import 'package:xs_user/order_provider.dart';
 import 'package:xs_user/theme_provider.dart';
 import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/menu_provider.dart';
+import 'package:xs_user/network_buffer.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final initializationService = InitializationService();
+  final networkBuffer = NetworkBuffer();
   runApp(
     MultiProvider(
       providers: [
@@ -22,6 +24,7 @@ void main() {
         ChangeNotifierProvider(create: (context) => CanteenProvider()),
         ChangeNotifierProvider(create: (context) => MenuProvider()),
         ChangeNotifierProvider(create: (context) => OrderProvider()),
+        ChangeNotifierProvider.value(value: networkBuffer),
         ChangeNotifierProvider.value(value: initializationService),
       ],
       child: const MyApp(),

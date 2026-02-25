@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/models.dart';
+import 'package:xs_user/network_buffer.dart';
 
 class OrderProvider extends ChangeNotifier {
   OrderResponse? _orderResponse;
@@ -50,6 +52,11 @@ class OrderProvider extends ChangeNotifier {
       debugPrint(
         'Authentication error while fetching orders: ${authError.code}',
       );
+    } on NetworkException catch (e) {
+      _error = 'No internet connection. Retrying...';
+      debugPrint('Network error fetching orders. Adding to buffer...');
+      NetworkBuffer().add('fetch_orders', () => fetchOrders(force: true));
+      rethrow;
     } on ApiException catch (apiError) {
       _error = apiError.message;
       debugPrint('API error while fetching orders: ${apiError.statusCode}');

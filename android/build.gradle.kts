@@ -2,6 +2,9 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://phonepe.mycloudrepo.io/public/repositories/phonepe-intentsdk-android")
+        }
     }
     dependencies {
         classpath("com.google.gms:google-services:4.4.2")
@@ -12,6 +15,9 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://phonepe.mycloudrepo.io/public/repositories/phonepe-intentsdk-android")
+        }
     }
 }
 
