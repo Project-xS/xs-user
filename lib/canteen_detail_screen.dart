@@ -205,6 +205,41 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: widget.canteen.isOpen
+                                    ? const Color(0xFF1BB05A)
+                                    : Colors.red.withAlpha(200),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                widget.canteen.isOpen ? 'Open' : 'Closed',
+                                style: GoogleFonts.montserrat(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.canteen.hoursLabel,
+                              style: GoogleFonts.montserrat(
+                                color: Colors.white.withAlpha(
+                                  (255 * 0.9).round(),
+                                ),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -251,6 +286,26 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   Widget _buildMenuTab(BuildContext context) {
     return Column(
       children: [
+        if (!widget.canteen.isOpen)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(30),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.withAlpha(120)),
+              ),
+              child: Text(
+                'Canteen is closed',
+                style: GoogleFonts.montserrat(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
@@ -336,6 +391,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                   return _buildMenuItem(
                     item: item,
                     canteenId: widget.canteen.id,
+                    isCanteenOpen: widget.canteen.isOpen,
                   );
                 },
               );
@@ -448,25 +504,55 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   Widget _buildInfoTab(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Text(
-        'Located at ${widget.canteen.location}',
-        style: GoogleFonts.montserrat(
-          color: Theme.of(context).textTheme.titleLarge?.color,
-          fontSize: 16,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Located at ${widget.canteen.location}',
+            style: GoogleFonts.montserrat(
+              color: Theme.of(context).textTheme.titleLarge?.color,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.canteen.isOpen ? 'Status: Open' : 'Status: Closed',
+            style: GoogleFonts.montserrat(
+              color: widget.canteen.isOpen
+                  ? const Color(0xFF1BB05A)
+                  : Colors.red,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Hours: ${widget.canteen.hoursLabel}',
+            style: GoogleFonts.montserrat(
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-Widget _buildMenuItem({required Item item, required int canteenId}) {
+Widget _buildMenuItem({
+  required Item item,
+  required int canteenId,
+  required bool isCanteenOpen,
+}) {
   return Consumer<CartProvider>(
     builder: (context, cart, child) {
       final cartItem = cart.items.containsKey(item.id.toString())
           ? cart.items[item.id.toString()]
           : null;
       final bool canAddItem =
-          item.isAvailable && (item.stock > 0 || item.stock == -1);
+          item.isAvailable &&
+          (item.stock > 0 || item.stock == -1) &&
+          isCanteenOpen;
 
       return Container(
         margin: const EdgeInsets.only(bottom: 12),

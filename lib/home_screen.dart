@@ -629,9 +629,9 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
 
           return SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
-              final canteen = canteenProvider.canteens[index];
+              final canteen = canteenProvider.sortedCanteens[index];
               return _buildCanteenCard(context, canteen);
-            }, childCount: canteenProvider.canteens.length),
+            }, childCount: canteenProvider.sortedCanteens.length),
           );
         },
       ),
@@ -676,9 +676,16 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                     rating: 0,
                     etag: null,
                     pic: null,
+                    openingTime: null,
+                    closingTime: null,
+                    isOpen: true,
                   ),
                 );
-                return _buildMenuItem(item: item, canteenName: canteen.name);
+                return _buildMenuItem(
+                  item: item,
+                  canteenName: canteen.name,
+                  isCanteenOpen: canteen.isOpen,
+                );
               }, childCount: items.length),
             );
           } else {
@@ -693,13 +700,18 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-  Widget _buildMenuItem({required Item item, required String canteenName}) {
+  Widget _buildMenuItem({
+    required Item item,
+    required String canteenName,
+    required bool isCanteenOpen,
+  }) {
     return Consumer<CartProvider>(
       builder: (context, cart, child) {
         final cartItem = cart.items.containsKey(item.id.toString())
             ? cart.items[item.id.toString()]
             : null;
-        final bool canAddItem = item.isAvailable && item.stock > 0;
+        final bool canAddItem =
+            item.isAvailable && item.stock > 0 && isCanteenOpen;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -831,6 +843,15 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (!isCanteenOpen)
+                      Text(
+                        'Canteen closed',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.red,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     const SizedBox(height: 4),
                     Text(
                       item.description ?? '',
@@ -951,6 +972,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
 }
 
 Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
+  final bool isClosed = !canteen.isOpen;
   return GestureDetector(
     onTap: () {
       Navigator.push(
@@ -983,13 +1005,24 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
             children: [
               Center(
                 child: (canteen.pic != null)
-                    ? ExtendedImage.network(
-                        canteen.pic!,
-                        cacheKey: canteen.etag,
-                        cache: true,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
+                    ? ColorFiltered(
+                        colorFilter: isClosed
+                            ? const ColorFilter.mode(
+                                Colors.grey,
+                                BlendMode.saturation,
+                              )
+                            : const ColorFilter.mode(
+                                Colors.transparent,
+                                BlendMode.multiply,
+                              ),
+                        child: ExtendedImage.network(
+                          canteen.pic!,
+                          cacheKey: canteen.etag,
+                          cache: true,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                        ),
                       )
                     : Icon(Icons.store),
               ),
@@ -1002,6 +1035,32 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
                   ),
                 ),
               ),
+              if (isClosed)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.black.withAlpha(140),
+                          Colors.black.withAlpha(60),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'CLOSED',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
                 top: 16,
                 right: 16,
@@ -1073,18 +1132,26 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFFFF7A3A)
-                            : Theme.of(context).primaryColor,
+                        color: isClosed
+                            ? Colors.red.withAlpha(200)
+                            : const Color(0xFF1BB05A),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Open',
+                        isClosed ? 'Closed' : 'Open',
                         style: GoogleFonts.montserrat(
                           color: Theme.of(context).colorScheme.onPrimary,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      canteen.hoursLabel,
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white.withAlpha((255 * 0.9).round()),
+                        fontSize: 11,
                       ),
                     ),
                   ],

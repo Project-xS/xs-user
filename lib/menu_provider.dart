@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
@@ -89,7 +88,7 @@ class MenuProvider extends ChangeNotifier {
       notifyListeners();
     } on AuthException {
       rethrow;
-    } on NetworkException catch (e) {
+    } on NetworkException {
       debugPrint('Network error fetching menu for $canteenId. Adding to buffer...');
       NetworkBuffer().add('fetch_menu_$canteenId', () => fetchMenuItems(canteenId, force: true));
       rethrow;

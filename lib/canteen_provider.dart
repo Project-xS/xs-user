@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
@@ -13,6 +12,16 @@ class CanteenProvider extends ChangeNotifier {
   Timer? _refreshTimer;
 
   List<Canteen> get canteens => _canteens;
+  List<Canteen> get sortedCanteens {
+    final sorted = List<Canteen>.from(_canteens);
+    sorted.sort((a, b) {
+      if (a.isOpen != b.isOpen) {
+        return (b.isOpen ? 1 : 0) - (a.isOpen ? 1 : 0);
+      }
+      return a.name.compareTo(b.name);
+    });
+    return sorted;
+  }
   bool get isLoading => _isLoading;
 
   CanteenProvider() {
@@ -71,7 +80,7 @@ class CanteenProvider extends ChangeNotifier {
       notifyListeners();
     } on AuthException {
       rethrow;
-    } on NetworkException catch (e) {
+    } on NetworkException {
       debugPrint('Network error fetching canteens. Adding to buffer...');
       NetworkBuffer().add('fetch_canteens', () => fetchCanteens(force: true));
       rethrow;

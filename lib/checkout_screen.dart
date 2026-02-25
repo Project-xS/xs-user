@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/cart_provider.dart';
+import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/initialization_service.dart';
 import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
@@ -116,6 +117,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final canteenId = cart.canteenId;
       if (canteenId == null) throw 'Could not determine canteen.';
 
+      final canteenProvider = Provider.of<CanteenProvider>(
+        context,
+        listen: false,
+      );
+      await canteenProvider.fetchCanteens(force: true);
+      if (!mounted) return;
+      Canteen? selectedCanteen;
+      for (final canteen in canteenProvider.canteens) {
+        if (canteen.id == canteenId) {
+          selectedCanteen = canteen;
+          break;
+        }
+      }
+      if (selectedCanteen != null && !selectedCanteen.isOpen) {
+        throw 'Canteen is closed';
+      }
+
       // 2. Create Hold
       final menuProvider = Provider.of<MenuProvider>(context, listen: false);
       await menuProvider.fetchMenuItems(canteenId, force: true);
@@ -159,7 +177,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       final holdResponse = await ApiService().createHold(itemIds, deliverAt);
       if (holdResponse.status != 'ok' || holdResponse.holdId == null) {
-        throw holdResponse.error ?? 'Failed to reserve items.';
+        final error = holdResponse.error ?? 'Failed to reserve items.';
+        if (error.toLowerCase().contains('closed')) {
+          throw 'Canteen is closed';
+        }
+        throw error;
       }
       holdId = holdResponse.holdId;
 
@@ -217,7 +239,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _orderError = e.toString().replaceAll('Exception:', '').trim();
+        final raw = e.toString().replaceAll('Exception:', '').trim();
+        _orderError =
+            raw.toLowerCase().contains('closed') ? 'Oops! Canteen is closed :(' : raw;
       });
     } finally {
       if (mounted) {
@@ -259,61 +283,58 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _buildSectionCard(
               context,
               title: 'Pickup Time',
-              child: Column(
-                children: [
-                  RadioListTile<String>(
-                    title: Text(
-                      'Instant',
-                      style: GoogleFonts.montserrat(fontSize: 14),
-                    ),
-                    value: 'instant',
-                    groupValue: _orderType,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _orderType = value);
-                    },
-                    activeColor: Theme.of(context).colorScheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  RadioListTile<String>(
-                    title: Text(
-                      'Preorder',
-                      style: GoogleFonts.montserrat(fontSize: 14),
-                    ),
-                    value: 'preorder',
-                    groupValue: _orderType,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _orderType = value);
-                    },
-                    activeColor: Theme.of(context).colorScheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  if (_orderType == 'preorder')
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 16,
-                        right: 16,
-                        bottom: 8,
+              child: RadioGroup<String>(
+                groupValue: _orderType,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _orderType = value);
+                },
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: Text(
+                        'Instant',
+                        style: GoogleFonts.montserrat(fontSize: 14),
                       ),
-                      child: DropdownButton<String>(
-                        value: _selectedTimeBand,
-                        isExpanded: true,
-                        underline: Container(
-                          height: 1,
-                          color: Theme.of(context).dividerColor,
+                      value: 'instant',
+                      activeColor: Theme.of(context).colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    RadioListTile<String>(
+                      title: Text(
+                        'Preorder',
+                        style: GoogleFonts.montserrat(fontSize: 14),
+                      ),
+                      value: 'preorder',
+                      activeColor: Theme.of(context).colorScheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    if (_orderType == 'preorder')
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          bottom: 8,
                         ),
-                        items: _timeBands
-                            .map(
-                              (e) =>
-                                  DropdownMenuItem(value: e, child: Text(e)),
-                            )
-                            .toList(),
-                        onChanged: (val) =>
-                            setState(() => _selectedTimeBand = val!),
+                        child: DropdownButton<String>(
+                          value: _selectedTimeBand,
+                          isExpanded: true,
+                          underline: Container(
+                            height: 1,
+                            color: Theme.of(context).dividerColor,
+                          ),
+                          items: _timeBands
+                              .map(
+                                (e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)),
+                              )
+                              .toList(),
+                          onChanged: (val) =>
+                              setState(() => _selectedTimeBand = val!),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),

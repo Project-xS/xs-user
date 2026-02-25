@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 class StatusResponse {
   final String status;
@@ -219,6 +220,9 @@ class Canteen {
   final String? pic;
   final String? etag;
   final double rating;
+  final String? openingTime;
+  final String? closingTime;
+  final bool isOpen;
 
   Canteen({
     required this.id,
@@ -227,7 +231,22 @@ class Canteen {
     required this.pic,
     required this.etag,
     required this.rating,
+    required this.openingTime,
+    required this.closingTime,
+    required this.isOpen,
   });
+
+  bool get isAlwaysOpen => openingTime == null && closingTime == null;
+
+  String get hoursLabel {
+    if (openingTime == null && closingTime == null) return 'Open 24/7';
+    final formattedOpen = _formatTime(openingTime);
+    final formattedClose = _formatTime(closingTime);
+    if (formattedOpen == null || formattedClose == null) {
+      return 'Hours unavailable';
+    }
+    return '$formattedOpen - $formattedClose';
+  }
 
   factory Canteen.fromJson(Map<String, dynamic> json) {
     return Canteen(
@@ -237,7 +256,25 @@ class Canteen {
       pic: json['pic_link'],
       etag: json['pic_etag']?.replaceAll(RegExp(r'["\\]'), ''),
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      openingTime: json['opening_time'] as String?,
+      closingTime: json['closing_time'] as String?,
+      isOpen: json['is_open'] ?? true,
     );
+  }
+
+  static String? _formatTime(String? value) {
+    if (value == null || value.isEmpty) return null;
+    try {
+      final parsed = DateFormat('HH:mm:ss').parse(value);
+      return DateFormat('h:mm a').format(parsed);
+    } catch (_) {
+      try {
+        final parsed = DateFormat('HH:mm').parse(value);
+        return DateFormat('h:mm a').format(parsed);
+      } catch (_) {
+        return null;
+      }
+    }
   }
 
   @override
@@ -250,7 +287,10 @@ class Canteen {
           location == other.location &&
           pic == other.pic &&
           etag == other.etag &&
-          rating == other.rating;
+          rating == other.rating &&
+          openingTime == other.openingTime &&
+          closingTime == other.closingTime &&
+          isOpen == other.isOpen;
 
   @override
   int get hashCode =>
@@ -259,7 +299,10 @@ class Canteen {
       location.hashCode ^
       pic.hashCode ^
       etag.hashCode ^
-      rating.hashCode;
+      rating.hashCode ^
+      openingTime.hashCode ^
+      closingTime.hashCode ^
+      isOpen.hashCode;
 }
 
 class Item {

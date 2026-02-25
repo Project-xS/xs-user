@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:xs_user/cart_provider.dart';
+import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/checkout_screen.dart';
+import 'package:xs_user/models.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -11,6 +13,19 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final canteenProvider = Provider.of<CanteenProvider>(context);
+    final int? canteenId = cart.canteenId;
+    Canteen? selectedCanteen;
+    if (canteenId != null) {
+      for (final canteen in canteenProvider.canteens) {
+        if (canteen.id == canteenId) {
+          selectedCanteen = canteen;
+          break;
+        }
+      }
+    }
+    final bool isCanteenClosed =
+        selectedCanteen != null && !selectedCanteen.isOpen;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -120,15 +135,41 @@ class CartScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const CheckoutScreen(),
+                        if (isCanteenClosed)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withAlpha(30),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.red.withAlpha(120),
+                                ),
                               ),
-                            );
-                          },
+                              child: Text(
+                                'Canteen is closed',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ElevatedButton(
+                          onPressed: isCanteenClosed
+                              ? null
+                              : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const CheckoutScreen(),
+                                    ),
+                                  );
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(
                               context,
