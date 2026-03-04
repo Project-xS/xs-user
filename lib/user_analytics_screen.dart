@@ -16,7 +16,7 @@ class UserAnalyticsScreen extends StatelessWidget {
       body: Consumer<OrderProvider>(
         builder: (context, orderProvider, child) {
           if (orderProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: LoadingIndicator());
           }
 
           if (orderProvider.error != null) {

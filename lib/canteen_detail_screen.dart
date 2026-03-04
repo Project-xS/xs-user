@@ -17,10 +17,12 @@ class CanteenDetailScreen extends StatefulWidget {
   State<CanteenDetailScreen> createState() => _CanteenDetailScreenState();
 }
 
-enum SortOption { name, popularity, priceAsc, veg, nonVeg }
+enum SortOption { name, popularity, priceAsc }
+enum FilterOption { all, veg, nonVeg }
 
 class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   SortOption _currentSortOption = SortOption.name;
+  FilterOption _currentFilterOption = FilterOption.all;
   late MenuProvider _menuProvider;
 
   @override
@@ -45,39 +47,34 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
   }
 
   List<Item> _applySortToItems(List<Item> items) {
-    List<Item> availableItems = items
+    // 1. Filter items based on diet preference
+    List<Item> filteredItems = items;
+    if (_currentFilterOption == FilterOption.veg) {
+      filteredItems = items.where((item) => item.isVeg).toList();
+    } else if (_currentFilterOption == FilterOption.nonVeg) {
+      filteredItems = items.where((item) => !item.isVeg).toList();
+    }
+
+    // 2. Separate available and unavailable items
+    List<Item> availableItems = filteredItems
         .where((item) => item.isAvailable)
         .toList();
-    List<Item> unavailableItems = items
+    List<Item> unavailableItems = filteredItems
         .where((item) => !item.isAvailable)
         .toList();
 
     Comparator<Item> comparator;
 
     switch (_currentSortOption) {
-      case SortOption.name:
-        comparator = (a, b) => a.name.compareTo(b.name);
-        break;
-      case SortOption.popularity:
-        // TODO: Items don't have popularity for now.
-        comparator = (a, b) => a.name.compareTo(b.name);
-        break;
       case SortOption.priceAsc:
         comparator = (a, b) => a.price.compareTo(b.price);
         break;
-      case SortOption.veg:
-        availableItems = availableItems.where((item) => item.isVeg).toList();
-        unavailableItems = unavailableItems
-            .where((item) => item.isVeg)
-            .toList();
-        comparator = (a, b) => a.name.compareTo(b.name);
+      case SortOption.popularity:
+        comparator = (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase());
         break;
-      case SortOption.nonVeg:
-        availableItems = availableItems.where((item) => !item.isVeg).toList();
-        unavailableItems = unavailableItems
-            .where((item) => !item.isVeg)
-            .toList();
-        comparator = (a, b) => a.name.compareTo(b.name);
+      case SortOption.name:
+      default:
+        comparator = (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase());
         break;
     }
 
@@ -246,16 +243,17 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      widget.canteen.hoursLabel,
-                                      style: GoogleFonts.montserrat(
-                                        color: Colors.white.withAlpha(
-                                          (255 * 0.9).round(),
-                                        ),
-                                        fontSize: 11,
-                                      ),
-                                    ),
+                                    //TODO: Add hours label well, removed misleading open 24x7 label for now
+                                  //   const SizedBox(width: 8),
+                                  //   Text(
+                                  //     widget.canteen.hoursLabel,
+                                  //     style: GoogleFonts.montserrat(
+                                  //       color: Colors.white.withAlpha(
+                                  //         (255 * 0.9).round(),
+                                  //       ),
+                                  //       fontSize: 11,
+                                  //     ),
+                                  //   ),
                                   ],
                                 ),
                               ],
@@ -312,7 +310,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             children: const [
               SizedBox(height: 200),
-              Center(child: CircularProgressIndicator()),
+              Center(child: LoadingIndicator()),
             ],
           );
         }
@@ -371,7 +369,7 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             children: const [
               SizedBox(height: 200),
-              Center(child: CircularProgressIndicator()),
+              Center(child: LoadingIndicator()),
             ],
           );
         }
@@ -496,14 +494,15 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          'Hours: ${widget.canteen.hoursLabel}',
-          style: GoogleFonts.montserrat(
-            color: Theme.of(context).textTheme.bodyMedium?.color,
-            fontSize: 14,
-          ),
-        ),
+        //TODO: Add hours label well, removed misleading open 24x7 label for now
+        // const SizedBox(height: 6),
+        // Text(
+        //   'Hours: ${widget.canteen.hoursLabel}',
+        //   style: GoogleFonts.montserrat(
+        //     color: Theme.of(context).textTheme.bodyMedium?.color,
+        //     fontSize: 14,
+        //   ),
+        // ),
       ],
     );
   }
@@ -534,8 +533,86 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          DropdownButton<FilterOption>(
+            value: _currentFilterOption,
+            icon: Icon(
+              Icons.filter_alt_rounded,
+              color: Theme.of(context).iconTheme.color,
+            ),
+            underline: Container(),
+            focusColor: Colors.transparent,
+            onChanged: (FilterOption? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  _currentFilterOption = newValue;
+                });
+              }
+            },
+            items: [
+              DropdownMenuItem(
+                value: FilterOption.all,
+                child: Text(
+                  'All ',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                ),
+              ),
+              DropdownMenuItem(
+                value: FilterOption.veg,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1BB05A),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(Icons.eco, color: Colors.white, size: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Veg ',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              DropdownMenuItem(
+                value: FilterOption.nonVeg,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(Icons.kebab_dining, color: Colors.white, size: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Non-Veg ',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           DropdownButton<SortOption>(
             value: _currentSortOption,
             icon: Icon(
@@ -551,42 +628,38 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
                 });
               }
             },
-            items:
-                const <DropdownMenuItem<SortOption>>[
-                  DropdownMenuItem(
-                    value: SortOption.name,
-                    child: Text('Sort by Name'),
+            items: [
+              DropdownMenuItem(
+                value: SortOption.name,
+                child: Text(
+                  'Sort by Name ',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
-                  DropdownMenuItem(
-                    value: SortOption.popularity,
-                    child: Text('Sort by Popularity'),
+                ),
+              ),
+              // DropdownMenuItem(
+              //   value: SortOption.popularity,
+              //   child: Text(
+              //     'Sort by Popularity ',
+              //     style: GoogleFonts.montserrat(
+              //       fontSize: 14,
+              //       color: Theme.of(context).textTheme.bodyMedium?.color,
+              //     ),
+              //   ),
+              // ),
+              DropdownMenuItem(
+                value: SortOption.priceAsc,
+                child: Text(
+                  'Sort by Price',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
-                  DropdownMenuItem(
-                    value: SortOption.priceAsc,
-                    child: Text('Sort by Price (Low to High)'),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.veg,
-                    child: Text('Sort by Vegetarian'),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.nonVeg,
-                    child: Text('Sort by Non-Vegetarian'),
-                  ),
-                ].map<DropdownMenuItem<SortOption>>((
-                  DropdownMenuItem<SortOption> item,
-                ) {
-                  return DropdownMenuItem<SortOption>(
-                    value: item.value,
-                    child: Text(
-                      item.child is Text ? (item.child as Text).data! : '',
-                      style: GoogleFonts.montserrat(
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                        fontSize: 14,
-                      ),
-                    ),
-                  );
-                }).toList(),
+                ),
+              ),
+            ],
           ),
         ],
       ),

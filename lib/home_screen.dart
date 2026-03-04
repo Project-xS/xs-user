@@ -14,6 +14,7 @@ import 'package:xs_user/login_screen.dart';
 import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/network_buffer.dart';
+import 'package:xs_user/notification_service.dart';
 import 'package:xs_user/notifications_screen.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/profile_screen.dart';
@@ -456,21 +457,46 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
               ),
             ),
             actions: [
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationsScreen(),
-                    ),
+              ValueListenableBuilder<int>(
+                valueListenable: NotificationService().notificationCount,
+                builder: (context, count, child) {
+                  return Stack(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationsScreen(),
+                            ),
+                          );
+                        },
+                        icon: Icon(
+                          Icons.notifications_none_outlined,
+                          color: Theme.of(context).iconTheme.color,
+                        ),
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          right: 12,
+                          top: 12,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 10,
+                              minHeight: 10,
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
-                icon: Icon(
-                  Icons.notifications_none_outlined,
-                  color: Theme.of(context).iconTheme.color,
-                ),
               ),
-              SizedBox(width: 7),
+              const SizedBox(width: 7),
             ],
           ),
           SliverToBoxAdapter(
@@ -624,7 +650,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
         builder: (context, canteenProvider, child) {
           if (canteenProvider.isLoading && canteenProvider.canteens.isEmpty) {
             return const SliverToBoxAdapter(
-              child: Center(child: CircularProgressIndicator()),
+              child: LoadingIndicator(),
             );
           }
 
@@ -660,7 +686,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const SliverToBoxAdapter(
-              child: Center(child: CircularProgressIndicator()),
+              child: LoadingIndicator(),
             );
           } else if (snapshot.hasError) {
             return SliverToBoxAdapter(
@@ -698,6 +724,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                 return _buildMenuItem(
                   item: item,
                   canteenName: canteen.name,
+                  canteenLocation: canteen.location,
                   isCanteenOpen: canteen.isOpen,
                 );
               }, childCount: items.length),
@@ -717,6 +744,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
   Widget _buildMenuItem({
     required Item item,
     required String canteenName,
+    required String canteenLocation,
     required bool isCanteenOpen,
   }) {
     return Consumer<CartProvider>(
@@ -759,7 +787,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                           ExtendedImage.network(
                             item.pic!,
                             cache: true,
-                            cacheKey: item.etag,
+                            cacheKey: '${item.etag}_${item.id}',
                             width: 70,
                             height: 70,
                             fit: BoxFit.cover,
@@ -868,12 +896,12 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                       ),
                     const SizedBox(height: 4),
                     Text(
-                      item.description ?? '',
+                      canteenLocation,
                       style: GoogleFonts.montserrat(
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                         fontSize: 12,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
@@ -1161,14 +1189,15 @@ Widget _buildCanteenCard(BuildContext context, Canteen canteen) {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      canteen.hoursLabel,
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white.withAlpha((255 * 0.9).round()),
-                        fontSize: 11,
-                      ),
-                    ),
+                    //TODO: Add hours label well, removed misleading open 24x7 label for now
+                    // const SizedBox(height: 6),
+                    // Text(
+                    //   canteen.hoursLabel,
+                    //   style: GoogleFonts.montserrat(
+                    //     color: Colors.white.withAlpha((255 * 0.9).round()),
+                    //     fontSize: 11,
+                    //   ),
+                    // ),
                   ],
                 ),
               ),

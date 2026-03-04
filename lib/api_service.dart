@@ -38,9 +38,14 @@ class ApiService {
     return 'https://proj-xs.fly.dev';
   }
 
-  static const _allowedDeliveryBands = {
+  static const allowedDeliveryBands = {
     '11:00am - 12:00pm',
     '12:00pm - 01:00pm',
+    // '01:00pm - 02:00pm',
+    // '02:00pm - 03:00pm',
+    // '03:00pm - 04:00pm',
+    // '04:00pm - 05:00pm',
+    // '05:00pm - 06:00pm',
   };
 
   final http.Client _client;
@@ -76,7 +81,7 @@ class ApiService {
   }
 
   Future<HoldResponse> createHold(List<int> itemIds, String? deliverAt) async {
-    final normalizedDeliverAt = _allowedDeliveryBands.contains(deliverAt)
+    final normalizedDeliverAt = allowedDeliveryBands.contains(deliverAt)
         ? deliverAt
         : null;
 

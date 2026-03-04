@@ -1,5 +1,36 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
+
+class LoadingIndicator extends StatelessWidget {
+  final double size;
+  const LoadingIndicator({super.key, this.size = 150});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Lottie.asset(
+        'assets/loading.lottie',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        repeat: true,
+        decoder: _customDecoder,
+      ),
+    );
+  }
+}
+
+  Future<LottieComposition?> _customDecoder(List<int> bytes) {
+    return LottieComposition.decodeZip(
+      bytes,
+      filePicker: (files) {
+        return files.firstWhere(
+          (f) => f.name.endsWith('.json') && !f.name.toLowerCase().contains('manifest'),
+        );
+      },
+    );
+  }
 
 class StatusResponse {
   final String status;
@@ -12,11 +43,44 @@ class StatusResponse {
   }
 }
 
+class NotificationItem {
+  final int orderId;
+  final String title;
+  final String body;
+  final DateTime timestamp;
+  final String orderType; // 'instant' or 'preorder'
+
+  NotificationItem({
+    required this.orderId,
+    required this.title,
+    required this.body,
+    required this.timestamp,
+    required this.orderType,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'orderId': orderId,
+        'title': title,
+        'body': body,
+        'timestamp': timestamp.toIso8601String(),
+        'orderType': orderType,
+      };
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) =>
+      NotificationItem(
+        orderId: json['orderId'],
+        title: json['title'],
+        body: json['body'],
+        timestamp: DateTime.parse(json['timestamp']),
+        orderType: json['orderType'],
+      );
+}
+
 class HoldResponse {
-  final String status;
   final int? holdId;
   final int? expiresAt;
   final String? error;
+  final String? status;
 
   HoldResponse({required this.status, this.holdId, this.expiresAt, this.error});
 
@@ -102,7 +166,7 @@ class Order {
       DateTime.fromMillisecondsSinceEpoch(orderedAtMs);
 
   factory Order.fromJson(Map<String, dynamic> json) {
-    debugPrint('Order.fromJson raw: $json');
+    // debugPrint('Order.fromJson raw: $json');
     final itemsList = (json['items'] as List?) ?? [];
     List<OrderItem> items = itemsList
         .map((i) => OrderItem.fromJson(i as Map<String, dynamic>))
@@ -138,9 +202,9 @@ class Order {
         orderedAtMs = orderedAtValue * 1000;
       }
     }
-    debugPrint(
-      'Order.fromJson: orderId=${json['order_id']}, rawOrderedAt=$rawOrderedAt, orderedAtMs=$orderedAtMs, items=${items.length}',
-    );
+    // debugPrint(
+    //   'Order.fromJson: orderId=${json['order_id']}, rawOrderedAt=$rawOrderedAt, orderedAtMs=$orderedAtMs, items=${items.length}',
+    // );
 
     return Order(
       orderId: json['order_id'] ?? 0,

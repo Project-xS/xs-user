@@ -1,12 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:xs_user/home_screen.dart';
 import 'package:xs_user/qr_display_screen.dart';
+import 'package:audioplayers/audioplayers.dart';
 
-class OrderSuccessScreen extends StatelessWidget {
+class OrderSuccessScreen extends StatefulWidget {
   final int orderId;
 
   const OrderSuccessScreen({super.key, required this.orderId});
+
+  @override
+  State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
+}
+
+class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    _playSuccessSound();
+  }
+
+  Future<void> _playSuccessSound() async {
+    try {
+      await _audioPlayer.play(AssetSource('sounds/order_success.mp3'));
+    } catch (e) {
+      debugPrint('Error playing success sound: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<LottieComposition?> _customDecoder(List<int> bytes) {
+    return LottieComposition.decodeZip(
+      bytes,
+      filePicker: (files) {
+        return files.firstWhere(
+          (f) =>
+              f.name.endsWith('.json') &&
+              !f.name.toLowerCase().contains('manifest'),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +70,13 @@ class OrderSuccessScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.check_circle,
-                color: const Color(0xFF14C38E),
-                size: 72,
+              Lottie.asset(
+                'assets/Order_completed.lottie',
+                height: 250,
+                repeat: false,
+                decoder: _customDecoder,
               ),
-              const SizedBox(height: 24),
+              // const SizedBox(height: -15),
               Text(
                 'Order Placed!',
                 style: GoogleFonts.montserrat(
@@ -57,7 +100,8 @@ class OrderSuccessScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => QrDisplayScreen(orderId: orderId),
+                      builder: (context) =>
+                          QrDisplayScreen(orderId: widget.orderId),
                     ),
                   );
                 },

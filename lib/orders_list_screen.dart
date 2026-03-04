@@ -81,7 +81,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
                   SizedBox(height: 200),
-                  Center(child: CircularProgressIndicator()),
+                  Center(child: LoadingIndicator()),
                 ],
               );
             }

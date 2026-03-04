@@ -2,6 +2,10 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+// import 'package:http/http.dart' as http;
+// import 'dart:convert';
+// import 'package:url_launcher/url_launcher.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/cart_provider.dart';
@@ -9,10 +13,10 @@ import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/initialization_service.dart';
 import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
+import 'package:xs_user/notification_service.dart';
 import 'package:xs_user/order_screen_success.dart';
 import 'dart:async';
 import 'package:xs_user/order_provider.dart';
-// import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 // import 'package:xs_user/phonepe_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -24,8 +28,10 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   String _orderType = 'instant';
-  String _selectedTimeBand = '11:00am - 12:00pm';
-  final List<String> _timeBands = ['11:00am - 12:00pm', '12:00pm - 01:00pm'];
+  String? _selectedTimeBand;
+  
+  final List<String> _allTimeBands = ApiService.allowedDeliveryBands.toList();
+  List<String> _availableTimeBands = [];
 
   bool _isProcessing = false;
   String? _orderError;
@@ -38,6 +44,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 1),
     );
+    _filterTimeBands();
+  }
+
+  void _filterTimeBands() {
+    final now = DateTime.now();
+    final format = DateFormat('h:mma');
+
+    _availableTimeBands = _allTimeBands.where((band) {
+      try {
+        final times = band.split(' - ');
+        if (times.length < 2) return false;
+        
+        final endTimeStr = times[1].trim().toUpperCase(); 
+        final parsedTime = format.parse(endTimeStr);
+        
+        final endDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          parsedTime.hour,
+          parsedTime.minute,
+        );
+
+        return now.isBefore(endDateTime);
+      } catch (e) {
+        debugPrint('CheckoutScreen: Error parsing time band "$band": $e');
+        return false;
+      }
+    }).toList();
+
+    _availableTimeBands.sort((a, b) {
+      try {
+        final timeA = format.parse(a.split(' - ')[0].trim().toUpperCase());
+        final timeB = format.parse(b.split(' - ')[0].trim().toUpperCase());
+        return timeA.compareTo(timeB);
+      } catch (_) {
+        return 0;
+      }
+    });
+
+    if (_availableTimeBands.isNotEmpty) {
+      if (_selectedTimeBand == null || !_availableTimeBands.contains(_selectedTimeBand)) {
+        _selectedTimeBand = _availableTimeBands.first;
+      }
+    } else if (_orderType == 'preorder') {
+      _orderType = 'instant';
+    }
   }
 
   @override
@@ -57,7 +110,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     try {
       final cart = Provider.of<CartProvider>(context, listen: false);
 
-      // 1. Validation
       if (cart.items.isEmpty || cart.totalAmount == 0) {
         throw 'Your cart is empty.';
       }
@@ -134,11 +186,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw 'Canteen is closed';
       }
 
-      // 2. Create Hold
       final menuProvider = Provider.of<MenuProvider>(context, listen: false);
       await menuProvider.fetchMenuItems(canteenId, force: true);
 
-      // Stock check
       for (final cartItem in cart.items.values) {
         final menuItem = menuProvider
             .getMenuItems(canteenId)
@@ -157,9 +207,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             );
 
-        if (menuItem.id == -1) {
-          continue; // Skip check if item missing? Or throw?
-        }
+        if (menuItem.id == -1) continue;
 
         if (!menuItem.isAvailable ||
             (menuItem.stock != -1 && menuItem.stock < cartItem.quantity)) {
@@ -167,6 +215,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
 
+      // --- Original Order Placement Logic ---
       final itemIds = cart.items.values
           .expand(
             (item) => List.generate(item.quantity, (_) => int.parse(item.id)),
@@ -185,31 +234,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       holdId = holdResponse.holdId;
 
-      // 3. PhonePe Payment (Commented out as requested)
-      /*
-      final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
-      final transactionId =
-          "TXN_${holdId}_${DateTime.now().millisecondsSinceEpoch}";
-
-      final paymentResponse = await PhonePeService.startPayment(
-        transactionId: transactionId,
-        amount: cart.totalAmount,
-        userId: firebaseUser?.uid ?? 'guest',
-      );
-
-      if (paymentResponse == null || paymentResponse['status'] != 'SUCCESS') {
-        final error =
-            paymentResponse?['error'] ?? 'Payment cancelled or failed.';
-        throw error;
-      }
-      */
-
-      // 4. Confirm Hold (Implicit Payment)
       final confirmResponse = await ApiService().confirmHold(
         holdId!,
       );
 
       if (confirmResponse.status == 'ok' && confirmResponse.orderId != null) {
+        final orderId = confirmResponse.orderId!;
+        
+        if (_orderType == 'instant') {
+          await NotificationService().showInstantNotification(
+            orderId,
+            selectedCanteen?.name ?? 'Canteen',
+          );
+        } else if (_selectedTimeBand != null) {
+          await NotificationService().schedulePreorderNotification(
+            orderId,
+            _selectedTimeBand!,
+            selectedCanteen?.name ?? 'Canteen'
+          );
+        }
+
         cart.clear();
         if (!mounted) return;
         Provider.of<OrderProvider>(
@@ -221,21 +265,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                OrderSuccessScreen(orderId: confirmResponse.orderId!),
+            builder: (context) => OrderSuccessScreen(orderId: orderId),
           ),
           (route) => false,
         );
       } else {
-        throw confirmResponse.error ?? 'Payment failed.';
+        throw confirmResponse.error ?? 'Order placement failed.';
       }
+
     } catch (e) {
       if (holdId != null) {
         try {
           await ApiService().cancelHold(holdId);
-        } catch (_) {
-          // Best-effort: release hold if confirm fails.
-        }
+        } catch (_) {}
       }
       if (!mounted) return;
       setState(() {
@@ -283,58 +325,71 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _buildSectionCard(
               context,
               title: 'Pickup Time',
-              child: RadioGroup<String>(
-                groupValue: _orderType,
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _orderType = value);
-                },
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: Text(
-                        'Instant',
-                        style: GoogleFonts.montserrat(fontSize: 14),
-                      ),
-                      value: 'instant',
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: Text(
+                      'Instant',
+                      style: GoogleFonts.montserrat(fontSize: 14),
                     ),
-                    RadioListTile<String>(
-                      title: Text(
-                        'Preorder',
-                        style: GoogleFonts.montserrat(fontSize: 14),
+                    value: 'instant',
+                    groupValue: _orderType,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _orderType = value);
+                    },
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  RadioListTile<String>(
+                    title: Text(
+                      'Preorder',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        color: _availableTimeBands.isEmpty ? Colors.grey : null,
                       ),
-                      value: 'preorder',
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      contentPadding: EdgeInsets.zero,
                     ),
-                    if (_orderType == 'preorder')
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          bottom: 8,
-                        ),
-                        child: DropdownButton<String>(
-                          value: _selectedTimeBand,
-                          isExpanded: true,
-                          underline: Container(
-                            height: 1,
-                            color: Theme.of(context).dividerColor,
-                          ),
-                          items: _timeBands
-                              .map(
-                                (e) =>
-                                    DropdownMenuItem(value: e, child: Text(e)),
-                              )
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => _selectedTimeBand = val!),
-                        ),
+                    value: 'preorder',
+                    groupValue: _orderType,
+                    onChanged: _availableTimeBands.isEmpty
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            setState(() => _orderType = value);
+                          },
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                    subtitle: _availableTimeBands.isEmpty
+                        ? const Text(
+                            'No time slots available for today',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          )
+                        : null,
+                  ),
+                  if (_orderType == 'preorder' && _availableTimeBands.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: 8,
                       ),
-                  ],
-                ),
+                      child: DropdownButton<String>(
+                        value: _selectedTimeBand,
+                        isExpanded: true,
+                        underline: Container(
+                          height: 1,
+                          color: Theme.of(context).dividerColor,
+                        ),
+                        items: _availableTimeBands
+                            .map(
+                              (e) => DropdownMenuItem(value: e, child: Text(e)),
+                            )
+                            .toList(),
+                        onChanged: (val) =>
+                            setState(() => _selectedTimeBand = val!),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
@@ -372,7 +427,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                     )
                   : Text(
-                      'Pay with UPI',
+                      'Place Order',
                       style: GoogleFonts.montserrat(
                         color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 16,
@@ -417,7 +472,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ],
           ),
           padding: const EdgeInsets.all(4),
-          child: child, // Inner content
+          child: child,
         ),
       ],
     );
