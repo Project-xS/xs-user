@@ -9,11 +9,11 @@ class PhonePeService {
   static String get _cId => (dotenv.env['PHONEPE_CLIENT_ID'] ?? 'PGTESTPAYUAT86').trim();
   static String get _cSecret => (dotenv.env['PHONEPE_CLIENT_SECRET'] ?? '96434309-7796-489d-8924-ab56988a6076').trim();
   
-  static String get _pgBaseUrl => (dotenv.env['PHONEPE_PG_BASE_URL'] ?? 'https://api-preprod.phonepe.com/apis/pg-sandbox').trim();
-  static String get _authBaseUrl => (dotenv.env['PHONEPE_AUTH_BASE_URL'] ?? 'https://api-preprod.phonepe.com/apis/pg-sandbox').trim();
+  static String get _pgBaseUrl => 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+  static String get _authBaseUrl => 'https://api-preprod.phonepe.com/apis/pg-sandbox';
   
-  static String get _environment => (dotenv.env['PHONEPE_ENVIRONMENT'] ?? 'SANDBOX').trim();
-  static String get _appSchema => (dotenv.env['PHONEPE_APP_SCHEMA'] ?? 'xsuser').trim();
+  static String get _environment =>'SANDBOX';
+  static String get _appSchema => 'xsuser';
 
   static bool _isInitialized = false;
 
@@ -26,12 +26,11 @@ class PhonePeService {
       
       String appId = (dotenv.env['PHONEPE_APP_ID'] ?? "").trim();
       
-      // DISCOVERED SIGNATURE for 3.0.x: (environment, appId, merchantId, enableLogging)
-      // Log confirmed third parameter is used as 'mid'
+      // Signature: (environment, appId, merchantId, enableLogging)
       _isInitialized = await PhonePePaymentSdk.init(
         _environment, 
-        appId, 
-        _mId, 
+        _mId,
+        'test',
         true
       );
       
@@ -45,44 +44,29 @@ class PhonePeService {
 
   static Future<String> _getAuthToken() async {
     try {
-      // Using raw string for x-www-form-urlencoded to avoid DESERIALIZATION_ERROR
-      final String body = 'grant_type=client_credentials&client_id=$_cId&client_secret=$_cSecret';
-      
       final response = await http.post(
-        Uri.parse('$_authBaseUrl/v1/oauth/token'),
+        Uri.parse('$_authBaseUrl/v1/oauth/token?client_version=1&grant_type=client_credentials&client_id=$_cId&client_secret=$_cSecret'),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
+          // 'Accept': '*/*',
+          // 'Origin': 'https://developer.phonepe.com',
+          // 'Referer': 'https://developer.phonepe.com/',
+          // 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
         },
-        body: body,
+        // body: {
+        //   'client_version': '1',
+        //   'grant_type': 'client_credentials',
+        //   'client_id': _cId,
+        //   'client_secret': _cSecret,
+        // },
       );
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        debugPrint('OAuth Token Response: $data');
         return data['access_token'];
       } else {
         debugPrint("OAUTH ERROR: ${response.statusCode} - ${response.body}");
-        
-        // Fallback: retry with JSON if still failing
-        if (response.statusCode == 415 || response.statusCode == 400) {
-           debugPrint("Retrying OAuth with JSON body...");
-           final retryResponse = await http.post(
-            Uri.parse('$_authBaseUrl/v1/oauth/token'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: jsonEncode({
-              'client_id': _cId,
-              'client_secret': _cSecret,
-              'grant_type': 'client_credentials',
-            }),
-          );
-          if (retryResponse.statusCode == 200) {
-            return jsonDecode(retryResponse.body)['access_token'];
-          }
-          debugPrint("RETRY OAUTH ERROR: ${retryResponse.statusCode} - ${retryResponse.body}");
-        }
         throw Exception("PhonePe OAuth Failed: ${response.body}");
       }
     } catch (e) {
@@ -101,20 +85,21 @@ class PhonePeService {
       final int amountInPaisa = (amount * 100).toInt();
 
       final payBody = {
-        "merchantOrderId": merchantTransactionId,
         "amount": amountInPaisa,
+        "expireAfter": 1200,
         "paymentFlow": {
-          "type": "PG_CHECKOUT",
-          "merchantUrls": {
-            "redirectUrl": "com.nammacanteen.user://payment-success",
-            "callbackUrl": "https://www.google.com" 
-          }
-        }
+          "type": "PG_CHECKOUT"
+        },
+        "enabledPaymentModes": [{
+          "type": "UPI_INTENT"
+          },],
+        "merchantOrderId": merchantTransactionId
       };
 
       final orderResponse = await http.post(
         Uri.parse('$_pgBaseUrl/checkout/v2/sdk/order'),
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
           'Authorization': 'O-Bearer ${oauthToken.trim()}',
         },
@@ -126,14 +111,15 @@ class PhonePeService {
         final String sdkToken = orderData['token']; 
 
         Map<String, dynamic> sdkPayload = {
-          "merchantId": _mId,
           "orderId": orderData['orderId'],
+          "merchantId": _mId,
           "token": sdkToken,
+          "paymentMode": {"type": "PAY_PAGE"}
         };
 
         return await PhonePePaymentSdk.startTransaction(
           jsonEncode(sdkPayload), 
-          _appSchema
+          'test'
         );
       } else {
         debugPrint("PhonePe Order API Failed: ${orderResponse.body}");

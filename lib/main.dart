@@ -19,9 +19,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final initializationService = InitializationService();
   final networkBuffer = NetworkBuffer();
-  // bool isPhonePeInitialized = await PhonePeService.init();
-  // debugPrint("PhonePe initialized: $isPhonePeInitialized");
-  
+  bool isPhonePeInitialized = await PhonePeService.init();
+  debugPrint("PhonePe initialized: $isPhonePeInitialized");
+
   // Initialize Notification Service
   await NotificationService().init();
 

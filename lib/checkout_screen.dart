@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-// import 'package:http/http.dart' as http;
-// import 'dart:convert';
-// import 'package:url_launcher/url_launcher.dart';
 import 'package:xs_user/api_service.dart';
 import 'package:xs_user/auth_service.dart';
 import 'package:xs_user/cart_provider.dart';
@@ -17,7 +14,7 @@ import 'package:xs_user/notification_service.dart';
 import 'package:xs_user/order_screen_success.dart';
 import 'dart:async';
 import 'package:xs_user/order_provider.dart';
-// import 'package:xs_user/phonepe_service.dart';
+import 'package:xs_user/phonepe_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -215,7 +212,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
 
-      // --- Original Order Placement Logic ---
+      // 1. Reserve items first
       final itemIds = cart.items.values
           .expand(
             (item) => List.generate(item.quantity, (_) => int.parse(item.id)),
@@ -234,43 +231,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       holdId = holdResponse.holdId;
 
-      final confirmResponse = await ApiService().confirmHold(
-        holdId!,
+      // 2. Start PhonePe Payment
+      final transactionId = 'TXN${DateTime.now().millisecondsSinceEpoch}';
+      final result = await PhonePeService.startPayment(
+        amount: cart.totalAmount,
+        merchantTransactionId: transactionId,
       );
 
-      if (confirmResponse.status == 'ok' && confirmResponse.orderId != null) {
-        final orderId = confirmResponse.orderId!;
-        
-        if (_orderType == 'instant') {
-          await NotificationService().showInstantNotification(
-            orderId,
-            selectedCanteen?.name ?? 'Canteen',
+      if (result != null && result['status'] == 'SUCCESS') {
+        // 3. Confirm backend order after successful payment
+        final confirmResponse = await ApiService().confirmHold(holdId!);
+
+        if (confirmResponse.status == 'ok' && confirmResponse.orderId != null) {
+          final orderId = confirmResponse.orderId!;
+          
+          if (_orderType == 'instant') {
+            await NotificationService().showInstantNotification(
+              orderId,
+              selectedCanteen?.name ?? 'Canteen',
+            );
+          } else if (_selectedTimeBand != null) {
+            await NotificationService().schedulePreorderNotification(
+              orderId,
+              _selectedTimeBand!,
+              selectedCanteen?.name ?? 'Canteen'
+            );
+          }
+
+          cart.clear();
+          if (!mounted) return;
+          Provider.of<OrderProvider>(
+            context,
+            listen: false,
+          ).fetchOrders(force: true);
+
+          if (!mounted) return;
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderSuccessScreen(orderId: orderId),
+            ),
+            (route) => false,
           );
-        } else if (_selectedTimeBand != null) {
-          await NotificationService().schedulePreorderNotification(
-            orderId,
-            _selectedTimeBand!,
-            selectedCanteen?.name ?? 'Canteen'
-          );
+        } else {
+          throw confirmResponse.error ?? 'Order confirmation failed on backend.';
         }
-
-        cart.clear();
-        if (!mounted) return;
-        Provider.of<OrderProvider>(
-          context,
-          listen: false,
-        ).fetchOrders(force: true);
-
-        if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OrderSuccessScreen(orderId: orderId),
-          ),
-          (route) => false,
-        );
       } else {
-        throw confirmResponse.error ?? 'Order placement failed.';
+        throw result?['message'] ?? 'Payment failed or was cancelled.';
       }
 
     } catch (e) {

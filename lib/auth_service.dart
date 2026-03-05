@@ -135,10 +135,18 @@ class AuthService {
   }
 
   static Future<bool> isGoogleSessionValid() async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) return false;
-    final token = await getValidIdToken();
-    return token != null;
+    for (int i = 0; i < 3; i++) {
+      final user = _firebaseAuth.currentUser;
+      if (user != null) {
+        final token = await getValidIdToken();
+        return token != null;
+      }
+      debugPrint('AuthService.isGoogleSessionValid: No user found, retry ${i + 1}');
+      await Future.delayed(Duration(milliseconds: 100 * (i + 1)));
+    }
+    
+    debugPrint('AuthService.isGoogleSessionValid: Final check failed, user is null');
+    return false;
   }
 
   static Future<String?> getValidIdToken({bool forceRefresh = false}) async {
