@@ -7,6 +7,7 @@ import 'package:xs_user/cart_provider.dart';
 import 'package:xs_user/cart_screen.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/menu_provider.dart';
+import 'package:xs_user/widgets/poor_connectivity_banner.dart';
 
 class CanteenDetailScreen extends StatefulWidget {
   final Canteen canteen;
@@ -131,169 +132,190 @@ class _CanteenDetailScreenState extends State<CanteenDetailScreen> {
           ),
         ],
       ),
-      body: DefaultTabController(
-        length: 3,
-        child: RefreshIndicator(
-          onRefresh: () => Provider.of<MenuProvider>(
-            context,
-            listen: false,
-          ).fetchMenuItems(widget.canteen.id, force: true),
-          notificationPredicate: (notification) => true,
-          child: NestedScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverToBoxAdapter(
-                  child: Hero(
-                    tag: 'canteen_image_${widget.canteen.id}',
-                    transitionOnUserGestures: true,
-                    child: SizedBox(
-                      height: 220,
-                      width: double.infinity,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          (widget.canteen.pic != null)
-                              ? ExtendedImage.network(
-                                  widget.canteen.pic!,
-                                  cache: true,
-                                  cacheKey: widget.canteen.etag,
-                                  clearMemoryCacheIfFailed: false,
-                                  fit: BoxFit.cover,
-                                )
-                              : const Center(child: Icon(Icons.store)),
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black.withAlpha(
-                                    (255 * 0.7).round(),
+      body: Stack(
+        children: [
+          DefaultTabController(
+            length: 3,
+            child: RefreshIndicator(
+              onRefresh: () => Provider.of<MenuProvider>(
+                context,
+                listen: false,
+              ).fetchMenuItems(widget.canteen.id, force: true),
+              notificationPredicate: (notification) => true,
+              child: NestedScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverToBoxAdapter(
+                      child: Hero(
+                        tag: 'canteen_image_${widget.canteen.id}',
+                        transitionOnUserGestures: true,
+                        child: SizedBox(
+                          height: 220,
+                          width: double.infinity,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              (widget.canteen.pic != null)
+                                  ? ExtendedImage.network(
+                                      widget.canteen.pic!,
+                                      cache: true,
+                                      cacheKey: widget.canteen.etag,
+                                      clearMemoryCacheIfFailed: false,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const Center(child: Icon(Icons.store)),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withAlpha(
+                                        (255 * 0.7).round(),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 16,
-                            left: 16,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.canteen.name,
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  widget.canteen.location,
-                                  style: GoogleFonts.montserrat(
-                                    color: Colors.white.withAlpha(
-                                      (255 * 0.9).round(),
-                                    ),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
+                              Positioned(
+                                bottom: 16,
+                                left: 16,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(
-                                      Icons.star,
-                                      color: Color(0xFFFFCB44),
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: 4),
                                     Text(
-                                      widget.canteen.rating.toString(),
+                                      widget.canteen.name,
                                       style: GoogleFonts.montserrat(
                                         color: Colors.white,
-                                        fontSize: 12,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: widget.canteen.isOpen
-                                            ? const Color(0xFF1BB05A)
-                                            : Colors.red.withAlpha(200),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        widget.canteen.isOpen
-                                            ? 'Open'
-                                            : 'Closed',
-                                        style: GoogleFonts.montserrat(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      widget.canteen.location,
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.white.withAlpha(
+                                          (255 * 0.9).round(),
                                         ),
+                                        fontSize: 13,
                                       ),
                                     ),
-                                    //TODO: Add hours label well, removed misleading open 24x7 label for now
-                                  //   const SizedBox(width: 8),
-                                  //   Text(
-                                  //     widget.canteen.hoursLabel,
-                                  //     style: GoogleFonts.montserrat(
-                                  //       color: Colors.white.withAlpha(
-                                  //         (255 * 0.9).round(),
-                                  //       ),
-                                  //       fontSize: 11,
-                                  //     ),
-                                  //   ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          color: Color(0xFFFFCB44),
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          widget.canteen.rating.toString(),
+                                          style: GoogleFonts.montserrat(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: widget.canteen.isOpen
+                                                ? const Color(0xFF1BB05A)
+                                                : Colors.red.withAlpha(200),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            widget.canteen.isOpen
+                                                ? 'Open'
+                                                : 'Closed',
+                                            style: GoogleFonts.montserrat(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        //TODO: Add hours label well, removed misleading open 24x7 label for now
+                                      //   const SizedBox(width: 8),
+                                      //   Text(
+                                      //     widget.canteen.hoursLabel,
+                                      //     style: GoogleFonts.montserrat(
+                                      //       color: Colors.white.withAlpha(
+                                      //         (255 * 0.9).round(),
+                                      //       ),
+                                      //       fontSize: 11,
+                                      //     ),
+                                      //   ),
+                                      ],
+                                    ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _TabBarDelegate(
-                    backgroundColor:
-                        Theme.of(context).scaffoldBackgroundColor,
-                    tabBar: TabBar(
-                      labelColor: const Color(0xFFFF7A3A),
-                      unselectedLabelColor: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.color,
-                      indicatorColor: const Color(0xFFFF7A3A),
-                      tabs: const [
-                        Tab(text: 'Menu'),
-                        Tab(text: 'Reviews'),
-                        Tab(text: 'Info'),
-                      ],
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _TabBarDelegate(
+                        backgroundColor:
+                            Theme.of(context).scaffoldBackgroundColor,
+                        tabBar: TabBar(
+                          labelColor: const Color(0xFFFF7A3A),
+                          unselectedLabelColor: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.color,
+                          indicatorColor: const Color(0xFFFF7A3A),
+                          tabs: const [
+                            Tab(text: 'Menu'),
+                            Tab(text: 'Reviews'),
+                            Tab(text: 'Info'),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ];
+                },
+                body: TabBarView(
+                  children: [
+                    _buildMenuTab(context),
+                    _buildReviewsTab(context),
+                    _buildInfoTab(context),
+                  ],
                 ),
-              ];
-            },
-            body: TabBarView(
-              children: [
-                _buildMenuTab(context),
-                _buildReviewsTab(context),
-                _buildInfoTab(context),
-              ],
+              ),
             ),
           ),
-        ),
+          Consumer<MenuProvider>(
+            builder: (context, menuProvider, child) {
+              final shouldShow =
+                  menuProvider.activeCanteenId == widget.canteen.id &&
+                  menuProvider.hasSlowInventoryConnection;
+              if (!shouldShow) return const SizedBox.shrink();
+
+              return Positioned(
+                left: 0,
+                right: 0,
+                bottom: MediaQuery.of(context).padding.bottom + 8,
+                child: const PoorConnectivityBanner(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

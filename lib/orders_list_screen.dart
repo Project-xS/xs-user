@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:xs_user/models.dart';
@@ -25,7 +27,28 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.filter == OrderFilter.active) {
+      unawaited(
+        Provider.of<OrderProvider>(
+          context,
+          listen: false,
+        ).startActiveOrderUpdates(),
+      );
+    }
     _fetchOrders();
+  }
+
+  @override
+  void dispose() {
+    if (widget.filter == OrderFilter.active) {
+      unawaited(
+        Provider.of<OrderProvider>(
+          context,
+          listen: false,
+        ).stopActiveOrderUpdates(),
+      );
+    }
+    super.dispose();
   }
 
   Future<void> _fetchOrders() async {

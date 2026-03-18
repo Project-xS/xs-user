@@ -18,6 +18,7 @@ import 'package:xs_user/notification_service.dart';
 import 'package:xs_user/notifications_screen.dart';
 import 'package:xs_user/orders_list_screen.dart';
 import 'package:xs_user/profile_screen.dart';
+import 'package:xs_user/widgets/poor_connectivity_banner.dart';
 
 import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/order_provider.dart';
@@ -156,40 +157,53 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: _widgetOptions.elementAt(_selectedIndex),
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: Theme.of(
-            context,
-          ).bottomNavigationBarTheme.backgroundColor,
-          selectedItemColor: Theme.of(
-            context,
-          ).bottomNavigationBarTheme.selectedItemColor,
-          unselectedItemColor: Theme.of(
-            context,
-          ).bottomNavigationBarTheme.unselectedItemColor,
-          selectedLabelStyle: GoogleFonts.montserrat(
-            fontWeight: FontWeight.w600,
-          ),
-          unselectedLabelStyle: GoogleFonts.montserrat(),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long),
-              label: 'Orders',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart_outlined),
-              label: 'Cart',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              label: 'Profile',
-            ),
-          ],
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
+        bottomNavigationBar: Consumer<OrderProvider>(
+          builder: (context, orderProvider, child) {
+            final showSlowNetworkBanner =
+                _selectedIndex == 1 && orderProvider.hasSlowOrderConnection;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showSlowNetworkBanner) const PoorConnectivityBanner(),
+                BottomNavigationBar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).bottomNavigationBarTheme.backgroundColor,
+                  selectedItemColor: Theme.of(
+                    context,
+                  ).bottomNavigationBarTheme.selectedItemColor,
+                  unselectedItemColor: Theme.of(
+                    context,
+                  ).bottomNavigationBarTheme.unselectedItemColor,
+                  selectedLabelStyle: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.montserrat(),
+                  items: const [
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.home_filled),
+                      label: 'Home',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.receipt_long),
+                      label: 'Orders',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.shopping_cart_outlined),
+                      label: 'Cart',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.person_outline),
+                      label: 'Profile',
+                    ),
+                  ],
+                  currentIndex: _selectedIndex,
+                  onTap: _onItemTapped,
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
