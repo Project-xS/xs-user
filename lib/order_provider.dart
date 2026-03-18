@@ -132,6 +132,12 @@ class OrderProvider extends ChangeNotifier {
   }
 
   void _handleOrderSseEvent(EventFluxData event) {
+    final eventName = event.event.trim().toLowerCase();
+    final payloadString = event.data.trim();
+    if (_isIgnorableKeepAliveEvent(eventName, payloadString)) {
+      return;
+    }
+
     final wasSlow = _orderLatencyTracker.isSlow;
     if (event.id.trim().isNotEmpty) {
       _orderLatencyTracker.recordFromEventId(event.id);
@@ -140,17 +146,15 @@ class OrderProvider extends ChangeNotifier {
       notifyListeners();
     }
 
-    final eventName = event.event.trim();
     if (eventName == 'status') {
       return;
     }
 
     if (eventName != 'user_order_update') {
-      debugPrint('Ignoring unknown order SSE event: $eventName');
+      debugPrint('Ignoring unknown order SSE event: ${event.event.trim()}');
       return;
     }
 
-    final payloadString = event.data.trim();
     if (payloadString.isEmpty) return;
 
     try {
@@ -174,6 +178,22 @@ class OrderProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Failed parsing user_order_update payload: $e');
     }
+  }
+
+  bool _isIgnorableKeepAliveEvent(String eventName, String payload) {
+    if (eventName.isEmpty && payload.isEmpty) {
+      return true;
+    }
+    if (eventName == 'keep-alive' || eventName == 'keepalive') {
+      return true;
+    }
+    if (payload == 'keep-alive' || payload == '"keep-alive"') {
+      return true;
+    }
+    if (payload == ': keep-alive' || payload == 'keep-alive ping') {
+      return true;
+    }
+    return false;
   }
 
   bool applyOrderStatusUpdate(int orderId, String status) {

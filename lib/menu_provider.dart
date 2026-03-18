@@ -97,6 +97,12 @@ class MenuProvider extends ChangeNotifier {
   void _handleInventorySseEvent(int canteenId, EventFluxData event) {
     if (_activeCanteenId != canteenId) return;
 
+    final eventName = event.event.trim().toLowerCase();
+    final payloadString = event.data.trim();
+    if (_isIgnorableKeepAliveEvent(eventName, payloadString)) {
+      return;
+    }
+
     final wasSlow = _inventoryLatencyTracker.isSlow;
     if (event.id.trim().isNotEmpty) {
       _inventoryLatencyTracker.recordFromEventId(event.id);
@@ -107,17 +113,15 @@ class MenuProvider extends ChangeNotifier {
       notifyListeners();
     }
 
-    final eventName = event.event.trim();
     if (eventName == 'status') {
       return;
     }
 
     if (eventName != 'inventory_update') {
-      debugPrint('Ignoring unknown inventory SSE event: $eventName');
+      debugPrint('Ignoring unknown inventory SSE event: ${event.event.trim()}');
       return;
     }
 
-    final payloadString = event.data.trim();
     if (payloadString.isEmpty) return;
 
     try {
@@ -160,6 +164,22 @@ class MenuProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Failed parsing inventory SSE payload: $e');
     }
+  }
+
+  bool _isIgnorableKeepAliveEvent(String eventName, String payload) {
+    if (eventName.isEmpty && payload.isEmpty) {
+      return true;
+    }
+    if (eventName == 'keep-alive' || eventName == 'keepalive') {
+      return true;
+    }
+    if (payload == 'keep-alive' || payload == '"keep-alive"') {
+      return true;
+    }
+    if (payload == ': keep-alive' || payload == 'keep-alive ping') {
+      return true;
+    }
+    return false;
   }
 
   bool _applyInventorySnapshot(
