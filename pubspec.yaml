@@ -52,7 +52,6 @@ dependencies:
   screen_brightness: ^1.0.1
   flutter_dotenv: ^6.0.0
   phonepe_payment_sdk: ^3.0.2
-  crypto: ^3.0.3
   lottie: ^3.3.1
   flutter_local_notifications: ^20.1.0
   timezone: ^0.10.1
