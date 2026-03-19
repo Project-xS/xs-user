@@ -231,53 +231,65 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       holdId = holdResponse.holdId;
 
-      // 2. Start PhonePe Payment
-      final transactionId = 'TXN${DateTime.now().millisecondsSinceEpoch}';
-      final result = await PhonePeService.startPayment(
-        amount: cart.totalAmount,
-        merchantTransactionId: transactionId,
+      // 2. Initiate payment via backend
+      final amountPaisa = (cart.totalAmount * 100).toInt();
+      final initiateResponse = await ApiService().initiatePayment(holdId!, amountPaisa);
+      if (initiateResponse.status != 'ok' ||
+          initiateResponse.orderId == null ||
+          initiateResponse.token == null ||
+          initiateResponse.merchantId == null ||
+          initiateResponse.merchantOrderId == null) {
+        throw initiateResponse.error ?? 'Failed to initiate payment.';
+      }
+
+      // 3. Show PhonePe SDK with token from backend
+      final result = await PhonePeService.startTransaction(
+        orderId: initiateResponse.orderId!,
+        merchantId: initiateResponse.merchantId!,
+        token: initiateResponse.token!,
       );
-
-      if (result != null && result['status'] == 'SUCCESS') {
-        // 3. Confirm backend order after successful payment
-        final confirmResponse = await ApiService().confirmHold(holdId!);
-
-        if (confirmResponse.status == 'ok' && confirmResponse.orderId != null) {
-          final orderId = confirmResponse.orderId!;
-          
-          if (_orderType == 'instant') {
-            await NotificationService().showInstantNotification(
-              orderId,
-              selectedCanteen?.name ?? 'Canteen',
-            );
-          } else if (_selectedTimeBand != null) {
-            await NotificationService().schedulePreorderNotification(
-              orderId,
-              _selectedTimeBand!,
-              selectedCanteen?.name ?? 'Canteen'
-            );
-          }
-
-          cart.clear();
-          if (!mounted) return;
-          Provider.of<OrderProvider>(
-            context,
-            listen: false,
-          ).fetchOrders(force: true);
-
-          if (!mounted) return;
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OrderSuccessScreen(orderId: orderId),
-            ),
-            (route) => false,
-          );
-        } else {
-          throw confirmResponse.error ?? 'Order confirmation failed on backend.';
-        }
-      } else {
+      if (result == null || result['status'] != 'SUCCESS') {
         throw result?['message'] ?? 'Payment failed or was cancelled.';
+      }
+
+      // 4. Verify payment via backend
+      final verifyResponse = await ApiService().verifyPayment(
+        holdId!,
+        initiateResponse.merchantOrderId!,
+      );
+      if (verifyResponse.status == 'ok' && verifyResponse.orderId != null) {
+        final orderId = verifyResponse.orderId!;
+
+        if (_orderType == 'instant') {
+          await NotificationService().showInstantNotification(
+            orderId,
+            selectedCanteen?.name ?? 'Canteen',
+          );
+        } else if (_selectedTimeBand != null) {
+          await NotificationService().schedulePreorderNotification(
+            orderId,
+            _selectedTimeBand!,
+            selectedCanteen?.name ?? 'Canteen',
+          );
+        }
+
+        cart.clear();
+        if (!mounted) return;
+        Provider.of<OrderProvider>(
+          context,
+          listen: false,
+        ).fetchOrders(force: true);
+
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OrderSuccessScreen(orderId: orderId),
+          ),
+          (route) => false,
+        );
+      } else {
+        throw verifyResponse.error ?? 'Payment verification failed.';
       }
 
     } catch (e) {
