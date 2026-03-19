@@ -1,0 +1,87 @@
+name: Build and Sign Android Release (arm64)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Sign APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          CURRENT_TAG=${{ github.ref_name }}
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^ 2>/dev/null || echo "")
+          REPO_URL="https://github.com/${{ github.repository }}"
+          
+          echo "CHANGELOG_BODY<<EOF" >> $GITHUB_ENV
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Full Changelog: [$PREVIOUS_TAG...$CURRENT_TAG]($REPO_URL/compare/$PREVIOUS_TAG...$CURRENT_TAG)" >> $GITHUB_ENV
+            echo "" >> $GITHUB_ENV
+            git log $PREVIOUS_TAG..$CURRENT_TAG --no-merges --pretty=format:"- %h: %s @%an" >> $GITHUB_ENV
+          else
+            echo "Full Changelog: $CURRENT_TAG" >> $GITHUB_ENV
+            echo "" >> $GITHUB_ENV
+            git log --no-merges --pretty=format:"- %h: %s @%an" >> $GITHUB_ENV
+          fi
+          echo "" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+          pub-cache: true
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.SIGNING_KEY_BASE64 }}" | base64 --decode > android/app/xs-keystore.keystore
+
+      - name: Build APK (arm64)
+        run: |
+          flutter build apk --release --target-platform android-arm64 \
+            --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
+            --dart-define=ALLOWED_GOOGLE_DOMAINS=${{ secrets.ALLOWED_GOOGLE_DOMAINS }} \
+            --dart-define=SERVER_CLIENT_ID=${{ secrets.SERVER_CLIENT_ID }}
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEYSTORE_PATH: "release-keystore.jks"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/app/outputs/flutter-apk/app-release.apk
+          body: ${{ env.CHANGELOG_BODY }}
+          generate_release_notes: false
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release-arm64
+          path: build/app/outputs/flutter-apk/app-release.apk

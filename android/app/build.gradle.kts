@@ -26,23 +26,32 @@ android {
         applicationId = "com.nammacanteen.user"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-buildTypes {
+    signingConfigs {
+        create("release") {
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "xs-keystore.keystore")
+            storePassword = System.getenv("KEY_STORE_PASSWORD")
+        }
+    }
+
+    buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             setProguardFiles(
                 listOf(
                     getDefaultProguardFile("proguard-android-optimize.txt"),
                     "proguard-rules.pro"
                 )
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
