@@ -94,22 +94,6 @@ class HoldResponse {
   }
 }
 
-class ConfirmResponse {
-  final String status;
-  final int? orderId;
-  final String? error;
-
-  ConfirmResponse({required this.status, this.orderId, this.error});
-
-  factory ConfirmResponse.fromJson(Map<String, dynamic> json) {
-    return ConfirmResponse(
-      status: json['status'],
-      orderId: json['order_id'],
-      error: json['error'],
-    );
-  }
-}
-
 class PaymentInitiateResponse {
   final String status;
   final String? orderId;

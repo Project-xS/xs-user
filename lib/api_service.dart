@@ -103,19 +103,6 @@ class ApiService {
     );
   }
 
-  Future<ConfirmResponse> confirmHold(int holdId) async {
-    final response = await _postEmpty(path: '/orders/hold/$holdId/confirm');
-
-    if (response.statusCode == 200 || response.statusCode == 409) {
-      return ConfirmResponse.fromJson(_decodeJson(response.body));
-    }
-
-    throw ApiException(
-      response.statusCode,
-      'Failed to confirm order. Please try again.',
-    );
-  }
-
   Future<PaymentInitiateResponse> initiatePayment(int holdId, int amountPaisa) async {
     final response = await _post(
       path: '/payments/initiate',
@@ -272,10 +259,6 @@ class ApiService {
       jsonBody: body,
       includeJsonContentType: true,
     );
-  }
-
-  Future<http.Response> _postEmpty({required String path}) {
-    return _send(method: 'POST', path: path, includeJsonContentType: false);
   }
 
   Future<http.Response> _delete({required String path}) {
