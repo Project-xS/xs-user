@@ -116,6 +116,28 @@ class ApiService {
     );
   }
 
+  Future<PaymentInitiateResponse> initiatePayment(int holdId, int amountPaisa) async {
+    final response = await _post(
+      path: '/payments/initiate',
+      body: {'hold_id': holdId, 'amount': amountPaisa},
+    );
+    if (response.statusCode == 200 || response.statusCode == 409) {
+      return PaymentInitiateResponse.fromJson(_decodeJson(response.body));
+    }
+    throw ApiException(response.statusCode, 'Failed to initiate payment.');
+  }
+
+  Future<PaymentVerifyResponse> verifyPayment(int holdId, String merchantOrderId) async {
+    final response = await _post(
+      path: '/payments/verify/$holdId',
+      body: {'merchant_order_id': merchantOrderId},
+    );
+    if (response.statusCode == 200 || response.statusCode == 409) {
+      return PaymentVerifyResponse.fromJson(_decodeJson(response.body));
+    }
+    throw ApiException(response.statusCode, 'Payment verification failed.');
+  }
+
   Future<StatusResponse> cancelHold(int holdId) async {
     final response = await _delete(path: '/orders/hold/$holdId');
 

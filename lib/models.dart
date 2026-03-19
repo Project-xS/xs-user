@@ -110,6 +110,58 @@ class ConfirmResponse {
   }
 }
 
+class PaymentInitiateResponse {
+  final String status;
+  final String? orderId;
+  final String? token;
+  final String? merchantId;
+  final String? merchantOrderId;
+  final String? error;
+
+  PaymentInitiateResponse({
+    required this.status,
+    this.orderId,
+    this.token,
+    this.merchantId,
+    this.merchantOrderId,
+    this.error,
+  });
+
+  factory PaymentInitiateResponse.fromJson(Map<String, dynamic> json) {
+    return PaymentInitiateResponse(
+      status: json['status'],
+      orderId: json['order_id'],
+      token: json['token'],
+      merchantId: json['merchant_id'],
+      merchantOrderId: json['merchant_order_id'],
+      error: json['error'],
+    );
+  }
+}
+
+class PaymentVerifyResponse {
+  final String status;
+  final int? orderId;
+  final String? paymentState;
+  final String? error;
+
+  PaymentVerifyResponse({
+    required this.status,
+    this.orderId,
+    this.paymentState,
+    this.error,
+  });
+
+  factory PaymentVerifyResponse.fromJson(Map<String, dynamic> json) {
+    return PaymentVerifyResponse(
+      status: json['status'],
+      orderId: json['order_id'],
+      paymentState: json['payment_state'],
+      error: json['error'],
+    );
+  }
+}
+
 class OrderItem {
   final String description;
   final bool isVeg;
