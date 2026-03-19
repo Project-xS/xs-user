@@ -30,6 +30,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders["phonepeMerchantId"] = "TEST"
+        manifestPlaceholders["phonepeIsUAT"] = "true"
+        manifestPlaceholders["phonepeIsSimulator"] = "true"
     }
 
     signingConfigs {
@@ -52,6 +56,8 @@ android {
                 )
             )
             signingConfig = signingConfigs.getByName("release")
+            manifestPlaceholders["phonepeIsUAT"] = "false"
+            manifestPlaceholders["phonepeIsSimulator"] = "false"
         }
     }
 }
