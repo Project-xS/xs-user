@@ -231,8 +231,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       holdId = holdResponse.holdId;
 
-      // 2. Initiate payment via backend
-      final amountPaisa = (cart.totalAmount * 100).toInt();
+      // 2. Initiate payment via backend - for now we dont do paisa, so it must be *100 if we do
+      final amountPaisa = (cart.totalAmount * 1).toInt();
       final initiateResponse = await ApiService().initiatePayment(holdId!, amountPaisa);
       if (initiateResponse.status != 'ok' ||
           initiateResponse.orderId == null ||
