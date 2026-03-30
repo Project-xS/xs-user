@@ -46,6 +46,16 @@ Notes:
 - `API_BASE_URL` is optional; defaults to `https://proj-xs.fly.dev`.
 - For PWA/web, the Firebase web keys above are required.
 
+## PWA Build (Nix + Podman)
+
+`flake.nix` is pinned to `nixos-25.11` and provides:
+- `packages.<system>.web` (full Flutter web build in Nix)
+- `packages.<system>.dockerImage` (layered Caddy image)
+
+App routes:
+- `/` install-only page
+- `/app` Flutter PWA shell
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
