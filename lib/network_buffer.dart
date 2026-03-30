@@ -38,30 +38,46 @@ class NetworkBuffer extends ChangeNotifier {
   bool _isProcessing = false;
   ConnectivityResult _connectionStatus = ConnectivityResult.none;
   Timer? _retryTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   List<BufferedRequest> get queue => List.unmodifiable(_queue);
   bool get isProcessing => _isProcessing;
   bool get hasInternet => _connectionStatus != ConnectivityResult.none;
 
   void _initConnectivity() {
-    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
-      // Check if we have ANY valid connection in the list
-      final hasConnection = results.any((result) => result != ConnectivityResult.none);
-      _connectionStatus = hasConnection ? results.first : ConnectivityResult.none;
-      
-      debugPrint('NetworkBuffer: Connection changed. Status: $_connectionStatus');
-      
-      if (hasConnection) {
-        debugPrint('NetworkBuffer: Internet restored. Resetting backoffs and processing...');
-        for (var req in _queue) {
-          req.nextRetryTime = DateTime.now();
-        }
-        processQueue();
+    Connectivity().checkConnectivity().then(_updateConnectionStatus);
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _updateConnectionStatus,
+    );
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> results) {
+    final hasConnection = results.any(
+      (result) => result != ConnectivityResult.none,
+    );
+    final nextStatus = hasConnection
+        ? results.firstWhere(
+            (result) => result != ConnectivityResult.none,
+            orElse: () => ConnectivityResult.none,
+          )
+        : ConnectivityResult.none;
+
+    final wasOnline = hasInternet;
+    _connectionStatus = nextStatus;
+
+    debugPrint('NetworkBuffer: Connection changed. Status: $_connectionStatus');
+
+    if (!wasOnline && hasInternet) {
+      debugPrint(
+        'NetworkBuffer: Internet restored. Resetting backoffs and processing...',
+      );
+      for (var req in _queue) {
+        req.nextRetryTime = DateTime.now();
       }
-      
-      // CRITICAL: Tell the UI that 'hasInternet' has changed!
-      notifyListeners();
-    });
+      processQueue();
+    }
+
+    notifyListeners();
   }
 
   void _startRetryTimer() {
@@ -80,6 +96,7 @@ class NetworkBuffer extends ChangeNotifier {
 
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _retryTimer?.cancel();
     super.dispose();
   }

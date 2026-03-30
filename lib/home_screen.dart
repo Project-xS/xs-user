@@ -435,7 +435,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 75,
+            expandedHeight: 116,
             backgroundColor: Colors.transparent,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
@@ -459,7 +459,7 @@ class HomeScreenBodyState extends State<HomeScreenBody> {
                       Text(
                         _getRandomPhrase(),
                         overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
+                        maxLines: 1,
                         style: GoogleFonts.montserrat(
                           color: Theme.of(context).textTheme.bodyMedium?.color,
                           fontSize: 13,
