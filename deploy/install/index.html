@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#061224" />
     <title>Install Namma Canteen</title>
     <meta
       name="description"
@@ -106,7 +108,7 @@
       </p>
 
       <div class="actions">
-        <button id="install-btn" hidden>Install App</button>
+        <button id="install-btn">Install App</button>
         <a id="open-btn" href="/app/">Open Installed App</a>
       </div>
 
@@ -130,19 +132,25 @@
         }
 
         let deferredPrompt = null;
-        const installBtn = document.getElementById("install-btn");
-        installBtn.addEventListener("click", async () => {
-          if (!deferredPrompt) return;
-          deferredPrompt.prompt();
-          await deferredPrompt.userChoice;
-          deferredPrompt = null;
-          installBtn.hidden = true;
+        const installButton = document.getElementById("install-btn");
+        if (!installButton) return;
+        installButton.style.display = "none";
+
+        window.addEventListener("beforeinstallprompt", (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          installButton.style.display = "block";
         });
 
-        window.addEventListener("beforeinstallprompt", (event) => {
-          event.preventDefault();
-          deferredPrompt = event;
-          installBtn.hidden = false;
+        installButton.addEventListener("click", async () => {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === "accepted") {
+            console.log("User accepted the install prompt");
+          }
+          deferredPrompt = null;
+          installButton.style.display = "none";
         });
       })();
     </script>

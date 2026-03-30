@@ -1,0 +1,19 @@
+{
+  auto_https off
+}
+
+:8080 {
+  handle_path /app* {
+    reverse_proxy 127.0.0.1:7357
+  }
+
+  handle {
+    root * /srv/install
+
+    @installManifest path /manifest.webmanifest
+    header @installManifest Content-Type "application/manifest+json; charset=utf-8"
+
+    try_files {path} /index.html
+    file_server
+  }
+}
