@@ -5,10 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xs_user/cart_provider.dart';
 import 'package:xs_user/home_screen.dart';
 import 'package:xs_user/initialization_service.dart';
-import 'package:xs_user/notification_service.dart';
 import 'package:xs_user/onboarding_screen.dart';
 import 'package:xs_user/order_provider.dart';
-import 'package:xs_user/phonepe_service.dart';
+import 'package:xs_user/platform/app_entry_gate.dart';
+import 'package:xs_user/platform/runtime_services.dart';
 import 'package:xs_user/theme_provider.dart';
 import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/menu_provider.dart';
@@ -17,13 +17,12 @@ import 'package:xs_user/models.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final isAllowedEntry = await enforcePwaEntryGate();
+  if (!isAllowedEntry) return;
+
   final initializationService = InitializationService();
   final networkBuffer = NetworkBuffer();
-  bool isPhonePeInitialized = await PhonePeService.init();
-  debugPrint("PhonePe initialized: $isPhonePeInitialized");
-
-  // Initialize Notification Service
-  await NotificationService().init();
+  await initializeRuntimeServices();
 
   runApp(
     MultiProvider(
@@ -158,9 +157,7 @@ class _MyAppState extends State<MyApp> {
               return const OnboardingScreen();
             }
           } else {
-            return const Scaffold(
-              body: Center(child: LoadingIndicator()),
-            );
+            return const Scaffold(body: Center(child: LoadingIndicator()));
           }
         },
       ),

@@ -1,8 +1,7 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:screen_brightness/screen_brightness.dart';
+import 'package:xs_user/platform/qr_screen_mode.dart';
 import 'package:xs_user/api_service.dart';
 
 class QrDisplayScreen extends StatefulWidget {
@@ -32,21 +31,11 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
   }
 
   Future<void> _boostBrightness() async {
-    try {
-      await ScreenBrightness().setScreenBrightness(1.0);
-    } catch (_) {
-      // Brightness control not available — continue without it
-    }
+    await activateQrScreenMode();
   }
 
   Future<void> _restoreBrightness() async {
-    try {
-      // resetScreenBrightness releases the app-level brightness override,
-      // giving control back to the system so the user can adjust freely.
-      await ScreenBrightness().resetScreenBrightness();
-    } catch (_) {
-      // Ignore
-    }
+    await deactivateQrScreenMode();
   }
 
   Future<void> _fetchQr() async {
@@ -164,8 +153,28 @@ class _QrDisplayScreenState extends State<QrDisplayScreen> {
             ),
           ),
           const SizedBox(height: 32),
+          if (kIsWeb) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: requestQrFullscreen,
+                icon: const Icon(Icons.fullscreen),
+                label: Text(
+                  'Enter Fullscreen',
+                  style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF7A3A),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Text(
-            'Keep your screen brightness high for easier scanning',
+            kIsWeb
+                ? 'For best scanning, use fullscreen and set your device brightness to maximum.'
+                : 'Keep your screen brightness high for easier scanning',
             textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
               fontSize: 12,
