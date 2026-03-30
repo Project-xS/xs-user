@@ -59,6 +59,7 @@ dependencies:
   audioplayers: ^6.6.0
   flutter_timezone: ^5.0.1
   eventflux: ^2.2.1
+  web: ^1.1.1
 
 dependency_overrides:
   vector_math: ^2.2.0

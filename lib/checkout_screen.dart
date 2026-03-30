@@ -12,9 +12,9 @@ import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/notification_service.dart';
 import 'package:xs_user/order_screen_success.dart';
+import 'package:xs_user/payment/payment_launcher.dart';
 import 'dart:async';
 import 'package:xs_user/order_provider.dart';
-import 'package:xs_user/phonepe_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -26,7 +26,7 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   String _orderType = 'instant';
   String? _selectedTimeBand;
-  
+
   final List<String> _allTimeBands = ApiService.allowedDeliveryBands.toList();
   List<String> _availableTimeBands = [];
 
@@ -52,10 +52,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       try {
         final times = band.split(' - ');
         if (times.length < 2) return false;
-        
-        final endTimeStr = times[1].trim().toUpperCase(); 
+
+        final endTimeStr = times[1].trim().toUpperCase();
         final parsedTime = format.parse(endTimeStr);
-        
+
         final endDateTime = DateTime(
           now.year,
           now.month,
@@ -82,7 +82,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
 
     if (_availableTimeBands.isNotEmpty) {
-      if (_selectedTimeBand == null || !_availableTimeBands.contains(_selectedTimeBand)) {
+      if (_selectedTimeBand == null ||
+          !_availableTimeBands.contains(_selectedTimeBand)) {
         _selectedTimeBand = _availableTimeBands.first;
       }
     } else if (_orderType == 'preorder') {
@@ -144,7 +145,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           }
 
           initializationService.addListener(listener);
-          if (initializationService.status != InitializationStatus.initializing) {
+          if (initializationService.status !=
+              InitializationStatus.initializing) {
             initializationService.removeListener(listener);
             if (!completer.isCompleted) {
               completer.complete();
@@ -233,7 +235,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // 2. Initiate payment via backend - for now we dont do paisa, so it must be *100 if we do
       final amountPaisa = (cart.totalAmount * 1).toInt();
-      final initiateResponse = await ApiService().initiatePayment(holdId!, amountPaisa);
+      final initiateResponse = await ApiService().initiatePayment(
+        holdId!,
+        amountPaisa,
+      );
       if (initiateResponse.status != 'ok' ||
           initiateResponse.orderId == null ||
           initiateResponse.token == null ||
@@ -242,19 +247,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw initiateResponse.error ?? 'Failed to initiate payment.';
       }
 
-      // 3. Show PhonePe SDK with token from backend
-      final result = await PhonePeService.startTransaction(
-        orderId: initiateResponse.orderId!,
-        merchantId: initiateResponse.merchantId!,
-        token: initiateResponse.token!,
-      );
-      if (result == null || result['status'] != 'SUCCESS') {
-        throw result?['message'] ?? 'Payment failed or was cancelled.';
+      // 3. Launch payment flow by platform
+      final launchResult = await launchPayment(initiateResponse);
+      if (!launchResult.success) {
+        throw launchResult.message ?? 'Payment failed or was cancelled.';
+      }
+
+      if (!mounted) return;
+      if (launchResult.requiresConfirmation) {
+        final shouldVerify = await _promptPaymentCompletion();
+        if (!shouldVerify) {
+          throw 'Payment verification cancelled.';
+        }
       }
 
       // 4. Verify payment via backend
+      if (initiateResponse.merchantOrderId == null) {
+        throw 'Missing merchant order id for payment verification.';
+      }
       final verifyResponse = await ApiService().verifyPayment(
-        holdId!,
+        holdId,
         initiateResponse.merchantOrderId!,
       );
       if (verifyResponse.status == 'ok' && verifyResponse.orderId != null) {
@@ -291,7 +303,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       } else {
         throw verifyResponse.error ?? 'Payment verification failed.';
       }
-
     } catch (e) {
       if (holdId != null) {
         try {
@@ -301,8 +312,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       setState(() {
         final raw = e.toString().replaceAll('Exception:', '').trim();
-        _orderError =
-            raw.toLowerCase().contains('closed') ? 'Oops! Canteen is closed :(' : raw;
+        _orderError = raw.toLowerCase().contains('closed')
+            ? 'Oops! Canteen is closed :('
+            : raw;
       });
     } finally {
       if (mounted) {
@@ -311,6 +323,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         });
       }
     }
+  }
+
+  Future<bool> _promptPaymentCompletion() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Complete Payment'),
+        content: const Text(
+          'After finishing payment in the opened page/app, tap "I completed payment" to continue.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('I completed payment'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
   }
 
   @override
@@ -385,7 +422,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           )
                         : null,
                   ),
-                  if (_orderType == 'preorder' && _availableTimeBands.isNotEmpty)
+                  if (_orderType == 'preorder' &&
+                      _availableTimeBands.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(
                         left: 16,

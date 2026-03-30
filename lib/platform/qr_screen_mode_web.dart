@@ -1,12 +1,13 @@
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
 
-Object? _wakeLockSentinel;
+web.WakeLockSentinel? _wakeLockSentinel;
 
 Future<void> activateQrScreenMode() async {
   try {
-    final wakeLock = (html.window.navigator as dynamic).wakeLock;
-    if (wakeLock == null) return;
-    _wakeLockSentinel = await wakeLock.request('screen') as Object?;
+    _wakeLockSentinel = await web.window.navigator.wakeLock
+        .request('screen')
+        .toDart;
   } catch (_) {
     // Wake lock is best-effort only on web.
   }
@@ -16,7 +17,7 @@ Future<void> deactivateQrScreenMode() async {
   try {
     final sentinel = _wakeLockSentinel;
     if (sentinel != null) {
-      await (sentinel as dynamic).release();
+      await sentinel.release().toDart;
       _wakeLockSentinel = null;
     }
   } catch (_) {
@@ -26,10 +27,10 @@ Future<void> deactivateQrScreenMode() async {
 
 Future<void> requestQrFullscreen() async {
   try {
-    final element = html.document.documentElement;
+    final element = web.document.documentElement;
     if (element == null) return;
-    if (html.document.fullscreenElement != null) return;
-    await element.requestFullscreen();
+    if (web.document.fullscreenElement != null) return;
+    await element.requestFullscreen().toDart;
   } catch (_) {
     // Fullscreen might be rejected if not triggered from user gesture.
   }

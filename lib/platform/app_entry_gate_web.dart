@@ -1,16 +1,19 @@
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+import 'package:web/web.dart' as web;
 
 bool _isStandaloneMode() {
-  final displayStandalone = html.window
+  final displayStandalone = web.window
       .matchMedia('(display-mode: standalone)')
       .matches;
-  final navigatorStandalone =
-      (html.window.navigator as dynamic).standalone as bool? ?? false;
-  return displayStandalone || navigatorStandalone;
+  final navigator = web.window.navigator as JSObject;
+  final standaloneValue = navigator.getProperty<JSBoolean?>('standalone'.toJS);
+  final iosStandalone = standaloneValue?.toDart ?? false;
+  return displayStandalone || iosStandalone;
 }
 
 Future<bool> enforcePwaEntryGate() async {
   if (_isStandaloneMode()) return true;
-  html.window.location.replace('/');
+  web.window.location.replace('/');
   return false;
 }

@@ -21,16 +21,18 @@ class LoadingIndicator extends StatelessWidget {
   }
 }
 
-  Future<LottieComposition?> _customDecoder(List<int> bytes) {
-    return LottieComposition.decodeZip(
-      bytes,
-      filePicker: (files) {
-        return files.firstWhere(
-          (f) => f.name.endsWith('.json') && !f.name.toLowerCase().contains('manifest'),
-        );
-      },
-    );
-  }
+Future<LottieComposition?> _customDecoder(List<int> bytes) {
+  return LottieComposition.decodeZip(
+    bytes,
+    filePicker: (files) {
+      return files.firstWhere(
+        (f) =>
+            f.name.endsWith('.json') &&
+            !f.name.toLowerCase().contains('manifest'),
+      );
+    },
+  );
+}
 
 class StatusResponse {
   final String status;
@@ -59,12 +61,12 @@ class NotificationItem {
   });
 
   Map<String, dynamic> toJson() => {
-        'orderId': orderId,
-        'title': title,
-        'body': body,
-        'timestamp': timestamp.toIso8601String(),
-        'orderType': orderType,
-      };
+    'orderId': orderId,
+    'title': title,
+    'body': body,
+    'timestamp': timestamp.toIso8601String(),
+    'orderType': orderType,
+  };
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) =>
       NotificationItem(
@@ -100,6 +102,8 @@ class PaymentInitiateResponse {
   final String? token;
   final String? merchantId;
   final String? merchantOrderId;
+  final String? paymentUrl;
+  final String? paymentMode;
   final String? error;
 
   PaymentInitiateResponse({
@@ -108,6 +112,8 @@ class PaymentInitiateResponse {
     this.token,
     this.merchantId,
     this.merchantOrderId,
+    this.paymentUrl,
+    this.paymentMode,
     this.error,
   });
 
@@ -118,6 +124,8 @@ class PaymentInitiateResponse {
       token: json['token'],
       merchantId: json['merchant_id'],
       merchantOrderId: json['merchant_order_id'],
+      paymentUrl: json['payment_url'],
+      paymentMode: json['payment_mode'],
       error: json['error'],
     );
   }
