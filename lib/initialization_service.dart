@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:xs_user/auth_service.dart';
+import 'package:xs_user/firebase_web_options.dart';
 
 enum InitializationStatus { uninitialized, initializing, initialized, error }
 
@@ -36,7 +37,11 @@ class InitializationService extends ChangeNotifier {
           rawAllowedDomains.isNotEmpty ? rawAllowedDomains : envAllowedDomains;
       _allowedDomains = _parseAllowedDomains(allowedDomainsValue);
 
-      await Firebase.initializeApp();
+      if (kIsWeb) {
+        await Firebase.initializeApp(options: resolveFirebaseWebOptions());
+      } else {
+        await Firebase.initializeApp();
+      }
 
       const serverClientId = String.fromEnvironment('SERVER_CLIENT_ID');
       final envServerClientId = dotenv.env['SERVER_CLIENT_ID'];

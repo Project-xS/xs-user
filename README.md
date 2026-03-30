@@ -17,6 +17,14 @@ Example `.env`:
 SERVER_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com
 ALLOWED_GOOGLE_DOMAINS=example.edu,example.com
 API_BASE_URL=https://proj-xs.fly.dev
+FIREBASE_WEB_API_KEY=YOUR_FIREBASE_WEB_API_KEY
+FIREBASE_WEB_APP_ID=YOUR_FIREBASE_WEB_APP_ID
+FIREBASE_WEB_MESSAGING_SENDER_ID=YOUR_FIREBASE_WEB_MESSAGING_SENDER_ID
+FIREBASE_WEB_PROJECT_ID=YOUR_FIREBASE_WEB_PROJECT_ID
+# Optional:
+# FIREBASE_WEB_AUTH_DOMAIN=your-project.firebaseapp.com
+# FIREBASE_WEB_STORAGE_BUCKET=your-project.appspot.com
+# FIREBASE_WEB_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
 
 Run with `--dart-define`:
@@ -25,13 +33,18 @@ Run with `--dart-define`:
 flutter run \
   --dart-define=SERVER_CLIENT_ID=YOUR_WEB_CLIENT_ID.apps.googleusercontent.com \
   --dart-define=ALLOWED_GOOGLE_DOMAINS=example.edu,example.com \
-  --dart-define=API_BASE_URL=https://proj-xs.fly.dev
+  --dart-define=API_BASE_URL=https://proj-xs.fly.dev \
+  --dart-define=FIREBASE_WEB_API_KEY=YOUR_FIREBASE_WEB_API_KEY \
+  --dart-define=FIREBASE_WEB_APP_ID=YOUR_FIREBASE_WEB_APP_ID \
+  --dart-define=FIREBASE_WEB_MESSAGING_SENDER_ID=YOUR_FIREBASE_WEB_MESSAGING_SENDER_ID \
+  --dart-define=FIREBASE_WEB_PROJECT_ID=YOUR_FIREBASE_WEB_PROJECT_ID
 ```
 
 Notes:
 - `SERVER_CLIENT_ID` should point to the Web Client ID created alongside your Firebase project.
 - `ALLOWED_GOOGLE_DOMAINS` is optional; leave blank to allow any verified Google account.
 - `API_BASE_URL` is optional; defaults to `https://proj-xs.fly.dev`.
+- For PWA/web, the Firebase web keys above are required.
 
 ## Getting Started
 
