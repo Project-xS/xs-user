@@ -37,12 +37,19 @@ class AuthService {
         : null;
     _allowedDomains = allowedGoogleDomains.map((d) => d.toLowerCase()).toList();
     if (!_googleSignInInitialized) {
-      await GoogleSignIn.instance.initialize(serverClientId: _serverClientId);
+      if (!kIsWeb) {
+        await GoogleSignIn.instance.initialize(serverClientId: _serverClientId);
+      }
       _googleSignInInitialized = true;
     }
   }
 
   static Future<void> signInWithGoogle() async {
+    if (kIsWeb) {
+      await _signInWithGoogleWeb();
+      return;
+    }
+
     try {
       final account = await GoogleSignIn.instance.authenticate(
         scopeHint: const ['email', 'profile'],
@@ -127,6 +134,77 @@ class AuthService {
       rethrow;
     } catch (error) {
       debugPrint('AuthService.signInWithGoogle error: $error');
+      throw AuthException(
+        'sign-in-failed',
+        'Unable to sign in with Google at this time.',
+      );
+    }
+  }
+
+  static Future<void> _signInWithGoogleWeb() async {
+    try {
+      final provider = GoogleAuthProvider();
+      final userCredential = await _firebaseAuth.signInWithPopup(provider);
+      final user = userCredential.user;
+
+      if (user == null) {
+        throw AuthException(
+          'user-null',
+          'Failed to complete sign-in. Please try again.',
+        );
+      }
+
+      final email = user.email;
+      if (email == null) {
+        await signOut();
+        throw AuthException(
+          'email-missing',
+          'Unable to read your Google account email.',
+        );
+      }
+
+      if (_allowedDomains.isNotEmpty) {
+        final domain = email.split('@').last.toLowerCase();
+        if (!_allowedDomains.contains(domain)) {
+          await signOut();
+          throw AuthException(
+            'domain-not-allowed',
+            'Please sign in with an allowed organization email.',
+          );
+        }
+      }
+
+      if (!(user.emailVerified)) {
+        await signOut();
+        throw AuthException(
+          'email-not-verified',
+          'Your Google account email must be verified before you can sign in.',
+        );
+      }
+
+      await _persistIdToken(user, forceRefresh: true);
+    } on FirebaseAuthException catch (error) {
+      debugPrint('AuthService._signInWithGoogleWeb Firebase error: $error');
+      if (error.code == 'popup-closed-by-user') {
+        throw AuthException(
+          'cancelled',
+          'Sign-in was cancelled. Please try again.',
+        );
+      }
+      if (error.code == 'popup-blocked') {
+        throw AuthException(
+          'popup-blocked',
+          'Popup blocked by browser. Please allow popups and try again.',
+        );
+      }
+      throw AuthException(
+        'sign-in-failed',
+        'Unable to sign in with Google at this time.',
+      );
+    } on AuthException {
+      rethrow;
+    } catch (error) {
+      debugPrint('AuthService._signInWithGoogleWeb error: $error');
       throw AuthException(
         'sign-in-failed',
         'Unable to sign in with Google at this time.',
