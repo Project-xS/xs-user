@@ -19,7 +19,9 @@ class ApiException implements Exception {
 
 class NetworkException implements Exception {
   final String message;
-  NetworkException([this.message = 'No internet connection. Please try again.']);
+  NetworkException([
+    this.message = 'No internet connection. Please try again.',
+  ]);
 
   @override
   String toString() => 'NetworkException: $message';
@@ -103,15 +105,16 @@ class ApiService {
     );
   }
 
-  Future<PaymentInitiateResponse> initiatePayment(int holdId, int amountPaisa) async {
-    final launchMode = kIsWeb ? 'web' : 'app';
+  Future<PaymentInitiateResponse> initiatePayment(
+    int holdId,
+    int amountPaisa,
+  ) async {
+    final initiatePath = kIsWeb
+        ? '/payments/initiate/web'
+        : '/payments/initiate/app';
     final response = await _post(
-      path: '/payments/initiate',
-      body: {
-        'hold_id': holdId,
-        'amount': amountPaisa,
-        'launch_mode': launchMode,
-      },
+      path: initiatePath,
+      body: {'hold_id': holdId, 'amount': amountPaisa},
     );
     if (response.statusCode == 200 || response.statusCode == 409) {
       return PaymentInitiateResponse.fromJson(_decodeJson(response.body));
@@ -119,7 +122,10 @@ class ApiService {
     throw ApiException(response.statusCode, 'Failed to initiate payment.');
   }
 
-  Future<PaymentVerifyResponse> verifyPayment(int holdId, String merchantOrderId) async {
+  Future<PaymentVerifyResponse> verifyPayment(
+    int holdId,
+    String merchantOrderId,
+  ) async {
     final response = await _post(
       path: '/payments/verify/$holdId',
       body: {'merchant_order_id': merchantOrderId},
