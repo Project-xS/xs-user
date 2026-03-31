@@ -1,4 +1,5 @@
 import 'package:confetti/confetti.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +13,7 @@ import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/models.dart';
 import 'package:xs_user/notification_service.dart';
 import 'package:xs_user/order_screen_success.dart';
+import 'package:xs_user/payment/payment_flow.dart';
 import 'package:xs_user/payment/payment_launcher.dart';
 import 'dart:async';
 import 'package:xs_user/order_provider.dart';
@@ -239,12 +241,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         holdId!,
         amountPaisa,
       );
-      if (initiateResponse.status != 'ok' ||
-          initiateResponse.orderId == null ||
-          initiateResponse.token == null ||
-          initiateResponse.merchantId == null ||
-          initiateResponse.merchantOrderId == null) {
-        throw initiateResponse.error ?? 'Failed to initiate payment.';
+      if (!isValidPaymentInitiateResponse(initiateResponse, isWeb: kIsWeb)) {
+        throw paymentInitiateError(initiateResponse, isWeb: kIsWeb);
       }
 
       // 3. Launch payment flow by platform
@@ -269,8 +267,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         holdId,
         initiateResponse.merchantOrderId!,
       );
-      if (verifyResponse.status == 'ok' && verifyResponse.orderId != null) {
-        final orderId = verifyResponse.orderId!;
+      final verificationOutcome = parsePaymentVerification(verifyResponse);
+      if (verificationOutcome.state == PaymentVerificationState.success &&
+          verificationOutcome.orderId != null) {
+        final orderId = verificationOutcome.orderId!;
 
         if (_orderType == 'instant') {
           await NotificationService().showInstantNotification(
@@ -301,7 +301,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           (route) => false,
         );
       } else {
-        throw verifyResponse.error ?? 'Payment verification failed.';
+        throw verificationOutcome.message;
       }
     } catch (e) {
       if (holdId != null) {

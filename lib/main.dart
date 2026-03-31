@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +15,7 @@ import 'package:xs_user/canteen_provider.dart';
 import 'package:xs_user/menu_provider.dart';
 import 'package:xs_user/network_buffer.dart';
 import 'package:xs_user/models.dart';
+import 'package:xs_user/payment/payment_return_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +62,13 @@ class _MyAppState extends State<MyApp> {
   Future<bool> _checkOnboardingStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('hasSeenOnboarding') ?? false;
+  }
+
+  bool _isPaymentReturnPath() {
+    if (!kIsWeb) return false;
+    final path = Uri.base.path.toLowerCase();
+    return path.endsWith('/payment-return') ||
+        path.endsWith('/payment-return/');
   }
 
   @override
@@ -151,6 +160,9 @@ class _MyAppState extends State<MyApp> {
         future: _hasSeenOnboardingFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
+            if (_isPaymentReturnPath()) {
+              return const PaymentReturnScreen();
+            }
             if (snapshot.data == true) {
               return const HomeScreen();
             } else {

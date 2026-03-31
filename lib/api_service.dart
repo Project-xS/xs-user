@@ -104,9 +104,14 @@ class ApiService {
   }
 
   Future<PaymentInitiateResponse> initiatePayment(int holdId, int amountPaisa) async {
+    final launchMode = kIsWeb ? 'web' : 'app';
     final response = await _post(
       path: '/payments/initiate',
-      body: {'hold_id': holdId, 'amount': amountPaisa},
+      body: {
+        'hold_id': holdId,
+        'amount': amountPaisa,
+        'launch_mode': launchMode,
+      },
     );
     if (response.statusCode == 200 || response.statusCode == 409) {
       return PaymentInitiateResponse.fromJson(_decodeJson(response.body));

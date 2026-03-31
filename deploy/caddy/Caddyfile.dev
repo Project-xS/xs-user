@@ -2,18 +2,24 @@
   auto_https off
 }
 
-:8080 {
+:3000 {
   handle_path /app* {
     reverse_proxy 127.0.0.1:7357
   }
 
-  handle {
+  @installRoutes path / /index.html /manifest.webmanifest /manifest.json
+  handle @installRoutes {
     root * /srv/install
 
-    @installManifest path /manifest.webmanifest
+    @installManifest path /manifest.webmanifest /manifest.json
     header @installManifest Content-Type "application/manifest+json; charset=utf-8"
+    rewrite /manifest.json /manifest.webmanifest
 
     try_files {path} /index.html
     file_server
+  }
+
+  handle {
+    reverse_proxy 127.0.0.1:7357
   }
 }
