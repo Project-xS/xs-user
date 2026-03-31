@@ -103,6 +103,8 @@ class PaymentInitiateResponse {
   final String? merchantId;
   final String? merchantOrderId;
   final String? paymentUrl;
+  final String? redirectUrl;
+  final String? tokenUrl;
   final String? paymentMode;
   final String? error;
 
@@ -113,9 +115,21 @@ class PaymentInitiateResponse {
     this.merchantId,
     this.merchantOrderId,
     this.paymentUrl,
+    this.redirectUrl,
+    this.tokenUrl,
     this.paymentMode,
     this.error,
   });
+
+  String? get webCheckoutTokenUrl {
+    final candidates = <String?>[tokenUrl, redirectUrl, paymentUrl];
+    for (final candidate in candidates) {
+      if (candidate != null && candidate.trim().isNotEmpty) {
+        return candidate.trim();
+      }
+    }
+    return null;
+  }
 
   factory PaymentInitiateResponse.fromJson(Map<String, dynamic> json) {
     return PaymentInitiateResponse(
@@ -125,6 +139,8 @@ class PaymentInitiateResponse {
       merchantId: json['merchant_id'],
       merchantOrderId: json['merchant_order_id'],
       paymentUrl: json['payment_url'],
+      redirectUrl: json['redirect_url'] ?? json['redirectUrl'],
+      tokenUrl: json['token_url'] ?? json['tokenUrl'],
       paymentMode: json['payment_mode'],
       error: json['error'],
     );

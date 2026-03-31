@@ -23,7 +23,7 @@ bool isValidPaymentInitiateResponse(
     return false;
   }
   if (isWeb) {
-    return response.paymentUrl != null && response.paymentUrl!.isNotEmpty;
+    return response.webCheckoutTokenUrl != null;
   }
   return response.orderId != null &&
       response.token != null &&

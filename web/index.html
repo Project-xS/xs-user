@@ -36,6 +36,106 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script src="https://mercury.phonepe.com/web/bundle/checkout.js" defer></script>
+  <script>
+    (() => {
+      const PROD_CHECKOUT_SCRIPT =
+        'https://mercury.phonepe.com/web/bundle/checkout.js';
+      const STG_CHECKOUT_SCRIPT =
+        'https://mercury-stg.phonepe.com/web/bundle/checkout.js';
+      const PROD_HINTS = ['api.phonepe.com', 'mercury.phonepe.com'];
+      let checkoutScriptPromise = null;
+
+      const hasCheckout = () =>
+        !!(
+          window &&
+          window.PhonePeCheckout &&
+          typeof window.PhonePeCheckout.transact === 'function'
+        );
+
+      const injectCheckoutScript = (src) =>
+        new Promise((resolve, reject) => {
+          const existing = document.querySelector(`script[src="${src}"]`);
+          if (existing) {
+            if (hasCheckout()) {
+              resolve(true);
+              return;
+            }
+            let settled = false;
+            const finish = () => {
+              if (settled) return;
+              settled = true;
+              resolve(hasCheckout());
+            };
+            existing.addEventListener('load', finish, { once: true });
+            existing.addEventListener(
+              'error',
+              () => {
+                if (settled) return;
+                settled = true;
+                reject(new Error('Failed to load PhonePe checkout script'));
+              },
+              { once: true },
+            );
+            setTimeout(finish, 1500);
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.onload = () => resolve(true);
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+
+      const isLikelyProdTokenUrl = (tokenUrl) => {
+        if (typeof tokenUrl !== 'string') return false;
+        return PROD_HINTS.some((hint) => tokenUrl.includes(hint));
+      };
+
+      const ensureCheckout = async (tokenUrl) => {
+        if (hasCheckout()) return true;
+        if (!checkoutScriptPromise) {
+          const scriptOrder = isLikelyProdTokenUrl(tokenUrl)
+            ? [PROD_CHECKOUT_SCRIPT, STG_CHECKOUT_SCRIPT]
+            : [STG_CHECKOUT_SCRIPT, PROD_CHECKOUT_SCRIPT];
+          checkoutScriptPromise = (async () => {
+            for (const scriptUrl of scriptOrder) {
+              await injectCheckoutScript(scriptUrl).catch(() => {});
+              if (hasCheckout()) return true;
+            }
+            return hasCheckout();
+          })().finally(() => {
+            checkoutScriptPromise = null;
+          });
+        }
+        return checkoutScriptPromise;
+      };
+
+      window.checkout = async (tokenUrl, type, callback) => {
+        const ready = await ensureCheckout(tokenUrl);
+        if (!ready || !hasCheckout()) {
+          if (typeof callback === 'function') callback('CHECKOUT_UNAVAILABLE');
+          return;
+        }
+        try {
+          window.PhonePeCheckout.transact({ tokenUrl, callback, type });
+        } catch (_) {
+          if (typeof callback === 'function') callback('CHECKOUT_INVOKE_ERROR');
+        }
+      };
+
+      window.closePhonePeCheckout = () => {
+        if (
+          hasCheckout() &&
+          typeof window.PhonePeCheckout.closePage === 'function'
+        ) {
+          window.PhonePeCheckout.closePage();
+        }
+      };
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
